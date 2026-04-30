@@ -80,15 +80,15 @@ describe("PreviewPlayer", () => {
     expect(screen.getByLabelText(/preview canvas 1080 by 1920/i)).toBeInTheDocument();
   });
 
-  it("stops playback at the end of the selected image or video clip", () => {
+  it("continues timeline playback past the first selected visual clip", () => {
     vi.useFakeTimers();
-    const clip: EditorClip = {
-      id: "video-clip",
+    const firstClip: EditorClip = {
+      id: "first-video",
       trackId: "track-video-1",
       kind: "video",
-      name: "Selected video",
-      sourcePath: "video.mp4",
-      timing: { start: 5, duration: 2, sourceIn: 0, sourceDuration: 2 },
+      name: "First video",
+      sourcePath: "first.mp4",
+      timing: { start: 0, duration: 2, sourceIn: 0, sourceDuration: 2 },
       transform: {
         position: { x: 0, y: 0 },
         size: { width: 1920, height: 1080 },
@@ -98,19 +98,26 @@ describe("PreviewPlayer", () => {
       },
       fades: { fadeIn: 0, fadeOut: 0 }
     };
+    const secondClip: EditorClip = {
+      ...firstClip,
+      id: "second-video",
+      name: "Second video",
+      sourcePath: "second.mp4",
+      timing: { start: 2, duration: 2, sourceIn: 0, sourceDuration: 2 }
+    };
     useEditorStore.setState((state) => ({
-      project: { ...state.project, clips: [clip] },
-      selectedClipId: clip.id,
-      playhead: 6.8
+      project: { ...state.project, clips: [firstClip, secondClip] },
+      selectedClipId: firstClip.id,
+      playhead: 1.8
     }));
 
     render(<PreviewPlayer />);
     fireEvent.click(screen.getByRole("button", { name: /play preview/i }));
     act(() => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(700);
     });
 
-    expect(useEditorStore.getState().playback).toBe("stopped");
-    expect(useEditorStore.getState().playhead).toBeCloseTo(7);
+    expect(useEditorStore.getState().playback).toBe("playing");
+    expect(useEditorStore.getState().playhead).toBeGreaterThan(2);
   });
 });

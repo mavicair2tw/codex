@@ -3,7 +3,6 @@
 import { Pause, Play, SkipBack, SkipForward, Square, StepBack, StepForward } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { shouldTogglePlaybackFromKeyboard } from "@/lib/keyboard/transport-shortcuts";
-import { getPreviewPlaybackBounds } from "@/lib/preview/playback-bounds";
 import { getRenderableLayers } from "@/lib/renderer/preview-engine";
 import { formatTimecode, getFadeMultiplierAtLocalTime } from "@/lib/time";
 import { useEditorStore } from "@/stores/editor-store";
@@ -85,7 +84,6 @@ const AudioPreview = ({ clip, localTime, playback }: AudioPreviewProps) => {
 export const PreviewPlayer = () => {
   const project = useEditorStore((state) => state.project);
   const { width: canvasWidth, height: canvasHeight } = project.settings.canvas;
-  const selectedClipId = useEditorStore((state) => state.selectedClipId);
   const playhead = useEditorStore((state) => state.playhead);
   const playback = useEditorStore((state) => state.playback);
   const setPlayback = useEditorStore((state) => state.setPlayback);
@@ -98,8 +96,6 @@ export const PreviewPlayer = () => {
   const stopPlayback = useEditorStore((state) => state.stopPlayback);
   const playheadRef = useRef(playhead);
   const durationRef = useRef(project.timeline.duration);
-  const projectRef = useRef(project);
-  const selectedClipIdRef = useRef(selectedClipId);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [previewSize, setPreviewSize] = useState({ width: canvasWidth, height: canvasHeight });
   const layers = getRenderableLayers(project, playhead);
@@ -112,14 +108,6 @@ export const PreviewPlayer = () => {
   useEffect(() => {
     durationRef.current = project.timeline.duration;
   }, [project.timeline.duration]);
-
-  useEffect(() => {
-    projectRef.current = project;
-  }, [project]);
-
-  useEffect(() => {
-    selectedClipIdRef.current = selectedClipId;
-  }, [selectedClipId]);
 
   useEffect(() => {
     const fitCanvasToStage = () => {
@@ -164,23 +152,11 @@ export const PreviewPlayer = () => {
 
     let animationFrame = 0;
     let last = performance.now();
-    const bounds = getPreviewPlaybackBounds(projectRef.current, selectedClipIdRef.current, playheadRef.current);
-    if (bounds && (playheadRef.current < bounds.start || playheadRef.current >= bounds.end)) {
-      playheadRef.current = bounds.start;
-      setPlayhead(bounds.start);
-    }
 
     const tick = (now: number) => {
       const delta = (now - last) / 1000;
       last = now;
       const next = playheadRef.current + delta;
-      const currentBounds = getPreviewPlaybackBounds(projectRef.current, selectedClipIdRef.current, playheadRef.current);
-      if (currentBounds && next >= currentBounds.end) {
-        playheadRef.current = currentBounds.end;
-        setPlayhead(currentBounds.end);
-        setPlayback("stopped");
-        return;
-      }
 
       if (next >= durationRef.current) {
         setPlayhead(durationRef.current);
