@@ -1,5 +1,6 @@
 "use client";
 
+import { englishFonts, traditionalChineseFonts } from "@/lib/text/fonts";
 import type { EditorClip } from "@/types/editor";
 import { useEditorStore } from "@/stores/editor-store";
 
@@ -126,10 +127,20 @@ export const LayerInspector = () => {
             <div className="field">
               <label htmlFor="font-family">Font family</label>
               <select id="font-family" onChange={(event) => updateSelected({ fontFamily: event.target.value } as Partial<EditorClip>)} value={selectedClip.fontFamily}>
-                <option value="Inter">Inter</option>
-                <option value="Arial">Arial</option>
-                <option value="Georgia">Georgia</option>
-                <option value="Helvetica">Helvetica</option>
+                <optgroup label="Traditional Chinese">
+                  {traditionalChineseFonts.map((font) => (
+                    <option key={font.value} value={font.value}>
+                      {font.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="English">
+                  {englishFonts.map((font) => (
+                    <option key={font.value} value={font.value}>
+                      {font.label}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
           </div>

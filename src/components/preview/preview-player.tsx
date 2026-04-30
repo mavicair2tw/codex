@@ -4,6 +4,7 @@ import { Pause, Play, SkipBack, SkipForward, Square, StepBack, StepForward } fro
 import { useEffect, useRef, useState } from "react";
 import { shouldTogglePlaybackFromKeyboard } from "@/lib/keyboard/transport-shortcuts";
 import { getRenderableLayers } from "@/lib/renderer/preview-engine";
+import { editorFontFallback } from "@/lib/text/fonts";
 import { formatTimecode, getFadeMultiplierAtLocalTime } from "@/lib/time";
 import { getTimelineContentEnd } from "@/lib/timeline/content-end";
 import { useEditorStore } from "@/stores/editor-store";
@@ -286,7 +287,7 @@ export const PreviewPlayer = () => {
               }}
             >
               {clip.kind === "text" ? (
-                <span style={{ color: clip.color, fontFamily: clip.fontFamily, fontSize: `${Math.max(12, clip.fontSize / 3)}px` }}>{clip.text}</span>
+                <span style={{ color: clip.color, fontFamily: `"${clip.fontFamily}", ${editorFontFallback}`, fontSize: `${Math.max(12, clip.fontSize / 3)}px` }}>{clip.text}</span>
               ) : (
                 <MediaPreview clip={clip} localTime={playhead - clip.timing.start} playback={playback} />
               )}
