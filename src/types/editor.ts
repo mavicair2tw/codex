@@ -101,6 +101,7 @@ export interface EditorProject {
   timeline: TimelineSettings;
   tracks: Track[];
   clips: EditorClip[];
+  mediaAssets: MediaAsset[];
 }
 
 export interface ExportJob {
@@ -109,4 +110,16 @@ export interface ExportJob {
   status: "idle" | "preparing" | "running" | "complete" | "failed";
   progress: number;
   message: string;
+}
+
+export interface MediaAsset {
+  id: string;
+  clipId: string;
+  kind: Exclude<LayerKind, "text">;
+  name: string;
+  sourcePath: string;
+  previewUrl?: string;
+  mimeType?: string;
+  duration: number;
+  importedAt: string;
 }

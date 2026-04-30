@@ -80,6 +80,8 @@ export const PreviewPlayer = () => {
   const playback = useEditorStore((state) => state.playback);
   const setPlayback = useEditorStore((state) => state.setPlayback);
   const setPlayhead = useEditorStore((state) => state.setPlayhead);
+  const togglePlayback = useEditorStore((state) => state.togglePlayback);
+  const stopPlayback = useEditorStore((state) => state.stopPlayback);
   const layers = getRenderableLayers(project, playhead);
   const activeAudioClips = project.clips.filter((clip) => clip.kind === "audio" && playhead >= clip.timing.start && playhead <= clip.timing.start + clip.timing.duration);
 
@@ -106,6 +108,27 @@ export const PreviewPlayer = () => {
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [playback, playhead, project.timeline.duration, setPlayback, setPlayhead]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      const isTyping =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable);
+
+      if (isTyping || event.code !== "Space" || event.repeat) {
+        return;
+      }
+
+      event.preventDefault();
+      togglePlayback();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [togglePlayback]);
 
   return (
     <section className="preview-column" aria-label="Preview player">
@@ -139,15 +162,12 @@ export const PreviewPlayer = () => {
       </div>
       <div className="transport">
         <div className="toolbar">
-          <button className="icon-button" onClick={() => setPlayback(playback === "playing" ? "paused" : "playing")} title={playback === "playing" ? "Pause" : "Play"} type="button">
+          <button className="icon-button" onClick={togglePlayback} title={playback === "playing" ? "Pause" : "Play"} type="button">
             {playback === "playing" ? <Pause size={16} /> : <Play size={16} />}
           </button>
           <button
             className="icon-button"
-            onClick={() => {
-              setPlayback("stopped");
-              setPlayhead(0);
-            }}
+            onClick={stopPlayback}
             title="Stop"
             type="button"
           >

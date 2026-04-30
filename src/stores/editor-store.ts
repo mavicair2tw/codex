@@ -15,6 +15,8 @@ interface EditorState {
   selectClip: (clipId: string | null) => void;
   setPlayhead: (seconds: number) => void;
   setPlayback: (playback: PlaybackState) => void;
+  togglePlayback: () => void;
+  stopPlayback: () => void;
   setZoom: (zoom: number) => void;
   toggleSnap: () => void;
   moveClip: (clipId: string, start: number, trackId?: string) => void;
@@ -57,6 +59,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })),
 
   setPlayback: (playback) => set({ playback }),
+
+  togglePlayback: () =>
+    set((state) => ({
+      playback: state.playback === "playing" ? "paused" : "playing"
+    })),
+
+  stopPlayback: () => set({ playback: "stopped", playhead: 0 }),
 
   setZoom: (zoom) =>
     set((state) => ({
@@ -263,7 +272,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           };
 
     set((current) => ({
-      project: { ...current.project, clips: [...current.project.clips, clip] },
+      project: {
+        ...current.project,
+        clips: [...current.project.clips, clip],
+        mediaAssets: [
+          ...current.project.mediaAssets,
+          {
+            id: makeId("asset"),
+            clipId: clip.id,
+            kind: file.kind,
+            name: file.name,
+            sourcePath: file.sourcePath,
+            previewUrl: file.previewUrl,
+            mimeType: file.mimeType,
+            duration: file.duration,
+            importedAt: new Date().toISOString()
+          }
+        ]
+      },
       selectedClipId: clip.id
     }));
   },

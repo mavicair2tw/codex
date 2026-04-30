@@ -19,6 +19,7 @@ export const sampleProject: EditorProject = {
     { id: "track-text-1", name: "Text 1", kind: "text" },
     { id: "track-audio-1", name: "Audio 1", kind: "audio" }
   ],
+  mediaAssets: [],
   clips: [
     {
       id: "clip-video-1",

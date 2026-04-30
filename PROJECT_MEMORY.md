@@ -25,6 +25,8 @@ This repository is the foundation for our first project with Codex.
 - Timeline components for ruler, zoom, snapping, draggable clips, trimming, and playhead control.
 - Browser import flow for video, image, and audio via file inputs and object URLs.
 - Desktop import flow via Tauri native dialogs, preserving real filesystem paths for FFmpeg.
+- Left-side media gallery stores imported assets and selects their timeline clip.
+- Shared transport actions power both the Play button and Space key playback shortcut.
 - Preview renderer abstraction for active layers, transforms, opacity, and fades.
 - FFmpeg command generation separated from UI.
 - Tauri command backend for local FFmpeg export.

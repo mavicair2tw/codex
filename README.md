@@ -7,10 +7,12 @@ A production-oriented foundation for a desktop video editor built with Next.js, 
 - Multi-track timeline for video, image, text, and audio layers
 - Import video, image, and audio files through browser file inputs on the web build
 - Import real local media paths through the Tauri desktop file dialog for FFmpeg export
+- Left-side media gallery logs imported video, image, and audio assets with thumbnails
 - Horizontal ruler, zoom controls, snap-to-grid, draggable playhead
 - Drag/move clips and trim clip start/end
 - Preview window synced to timeline position
 - Play, pause, stop, and scrub controls
+- Space toggles preview playback unless the user is typing in a form field
 - Layer controls for timing, transform, opacity, fades, text styling, and audio volume fades
 - FFmpeg command generation separated from UI
 - Tauri backend command for H.264 MP4 export through local FFmpeg
@@ -25,6 +27,7 @@ src/components          React editor UI components
 src/data                Sample project model
 src/lib/ffmpeg          FFmpeg command generation and export presets
 src/lib/export          Export service and Tauri bridge
+src/lib/media           Media import metadata and preview URL helpers
 src/lib/renderer        Preview renderer abstraction
 src/lib/time.ts         Timeline math, snapping, frame rounding, timecode helpers
 src/stores              Zustand editor state

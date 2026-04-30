@@ -3,6 +3,7 @@
 import { ImageIcon, Music, Type, Video } from "lucide-react";
 import { useRef, useState } from "react";
 import { LayerInspector } from "@/components/inspector/layer-inspector";
+import { MediaGallery } from "@/components/media/media-gallery";
 import { PreviewPlayer } from "@/components/preview/preview-player";
 import { TimelineEditor } from "@/components/timeline/timeline-editor";
 import { ExportPanel } from "@/components/toolbar/export-panel";
@@ -89,6 +90,7 @@ export const EditorShell = () => {
         <ExportPanel />
       </header>
       <section className="main">
+        <MediaGallery />
         <PreviewPlayer />
         <LayerInspector />
       </section>
