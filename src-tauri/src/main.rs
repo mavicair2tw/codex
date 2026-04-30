@@ -73,6 +73,7 @@ fn export_with_ffmpeg(app: tauri::AppHandle, args: Vec<String>, output_path: Str
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![export_with_ffmpeg])
         .run(tauri::generate_context!())
         .expect("failed to run Codex Video Editor");

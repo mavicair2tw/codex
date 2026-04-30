@@ -86,6 +86,19 @@ button {
   gap: 8px;
 }
 
+.file-input {
+  display: none;
+}
+
+.import-error {
+  color: var(--warning);
+  font-size: 12px;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .icon-button,
 .text-button {
   align-items: center;
@@ -168,6 +181,15 @@ button {
   overflow: hidden;
   position: absolute;
   transform-origin: center;
+}
+
+.preview-media {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
 }
 
 .preview-layer.text {

@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { sampleProject } from "@/data/sample-project";
 import { clamp, snapTime } from "@/lib/time";
+import type { ImportedMediaFile } from "@/lib/media/read-media-file";
 import type { EditorClip, EditorProject, ExportJob, ExportPreset, PlaybackState } from "@/types/editor";
 
 interface EditorState {
@@ -23,6 +24,7 @@ interface EditorState {
   addImageClip: () => void;
   addVideoClip: () => void;
   addAudioClip: () => void;
+  importMediaClip: (file: ImportedMediaFile) => void;
   setExportPreset: (preset: ExportPreset) => void;
   setExportProgress: (progress: number, message: string) => void;
   setExportStatus: (status: ExportJob["status"], message?: string) => void;
@@ -211,6 +213,59 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       fades: { fadeIn: 0, fadeOut: 0 }
     };
     set((state) => ({ project: { ...state.project, clips: [...state.project.clips, clip] }, selectedClipId: clip.id }));
+  },
+
+  importMediaClip: (file) => {
+    const state = get();
+    const track = state.project.tracks.find((item) => item.kind === file.kind);
+    if (!track) return;
+
+    const start = state.playhead;
+    const remainingDuration = Math.max(0.1, state.project.timeline.duration - start);
+    const duration = clamp(file.duration, 0.1, remainingDuration);
+    const sourceDuration = Math.max(0.1, file.duration);
+    const naturalSize = file.naturalSize ?? state.project.settings.canvas;
+
+    const common = {
+      id: makeId(file.kind),
+      trackId: track.id,
+      name: file.name,
+      sourcePath: file.sourcePath,
+      previewUrl: file.previewUrl,
+      fileName: file.sourcePath,
+      mimeType: file.mimeType,
+      timing: { start, duration, sourceIn: 0, sourceDuration },
+      transform: {
+        position: { x: file.kind === "image" ? 160 : 0, y: file.kind === "image" ? 120 : 0 },
+        size:
+          file.kind === "image"
+            ? { width: Math.min(naturalSize.width, 720), height: Math.min(naturalSize.height, 480) }
+            : state.project.settings.canvas,
+        scale: 1,
+        rotation: 0,
+        opacity: 1
+      },
+      fades: { fadeIn: 0.25, fadeOut: 0.25 }
+    };
+
+    const clip: EditorClip =
+      file.kind === "audio"
+        ? {
+            ...common,
+            kind: "audio",
+            volume: 0.85,
+            volumeFadeIn: 0.4,
+            volumeFadeOut: 0.4
+          }
+        : {
+            ...common,
+            kind: file.kind
+          };
+
+    set((current) => ({
+      project: { ...current.project, clips: [...current.project.clips, clip] },
+      selectedClipId: clip.id
+    }));
   },
 
   setExportPreset: (preset) => set((state) => ({ exportJob: { ...state.exportJob, preset } })),

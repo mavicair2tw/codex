@@ -48,11 +48,17 @@ export interface BaseClip {
 export interface MediaClip extends BaseClip {
   kind: "video" | "image";
   sourcePath: string;
+  previewUrl?: string;
+  fileName?: string;
+  mimeType?: string;
 }
 
 export interface AudioClip extends BaseClip {
   kind: "audio";
   sourcePath: string;
+  previewUrl?: string;
+  fileName?: string;
+  mimeType?: string;
   volume: number;
   volumeFadeIn: number;
   volumeFadeOut: number;

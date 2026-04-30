@@ -5,6 +5,8 @@ A production-oriented foundation for a desktop video editor built with Next.js, 
 ## Current Capabilities
 
 - Multi-track timeline for video, image, text, and audio layers
+- Import video, image, and audio files through browser file inputs on the web build
+- Import real local media paths through the Tauri desktop file dialog for FFmpeg export
 - Horizontal ruler, zoom controls, snap-to-grid, draggable playhead
 - Drag/move clips and trim clip start/end
 - Preview window synced to timeline position
@@ -46,6 +48,8 @@ Install FFmpeg locally and ensure `ffmpeg` is available on `PATH`.
 ```bash
 npm run tauri dev
 ```
+
+In the desktop app, use the Video/Image/Audio toolbar buttons to select files through the native dialog. Those imports preserve the real local source path so the FFmpeg export pipeline can read the media.
 
 ## Production Site
 

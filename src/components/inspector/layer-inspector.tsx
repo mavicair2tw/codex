@@ -53,6 +53,16 @@ export const LayerInspector = () => {
             <input id="fade-out" min={0} onChange={(event) => updateSelected({ fades: { ...selectedClip.fades, fadeOut: asNumber(event.target.value) } })} step={0.05} type="number" value={selectedClip.fades.fadeOut} />
           </div>
         </div>
+        {"sourcePath" in selectedClip ? (
+          <div className="field">
+            <label htmlFor="source-path">Source path</label>
+            <input
+              id="source-path"
+              onChange={(event) => updateSelected({ sourcePath: event.target.value } as Partial<EditorClip>)}
+              value={selectedClip.sourcePath}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="export-panel">

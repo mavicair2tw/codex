@@ -23,6 +23,8 @@ This repository is the foundation for our first project with Codex.
 - Zustand editor store for project, timeline, selection, playback, and export state.
 - Typed data model for video, audio, image, and text clips.
 - Timeline components for ruler, zoom, snapping, draggable clips, trimming, and playhead control.
+- Browser import flow for video, image, and audio via file inputs and object URLs.
+- Desktop import flow via Tauri native dialogs, preserving real filesystem paths for FFmpeg.
 - Preview renderer abstraction for active layers, transforms, opacity, and fades.
 - FFmpeg command generation separated from UI.
 - Tauri command backend for local FFmpeg export.

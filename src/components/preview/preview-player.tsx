@@ -1,10 +1,78 @@
 "use client";
 
 import { Pause, Play, Square } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { getRenderableLayers } from "@/lib/renderer/preview-engine";
 import { formatTimecode } from "@/lib/time";
 import { useEditorStore } from "@/stores/editor-store";
+import type { EditorClip } from "@/types/editor";
+
+interface MediaPreviewProps {
+  clip: EditorClip;
+  localTime: number;
+  playback: "playing" | "paused" | "stopped";
+}
+
+const MediaPreview = ({ clip, localTime, playback }: MediaPreviewProps) => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (clip.kind !== "video" || !videoRef.current) return;
+    const video = videoRef.current;
+    const target = Math.max(0, clip.timing.sourceIn + localTime);
+    if (Math.abs(video.currentTime - target) > 0.08) {
+      video.currentTime = target;
+    }
+
+    if (playback === "playing") {
+      video.play().catch(() => undefined);
+    } else {
+      video.pause();
+    }
+  }, [clip, localTime, playback]);
+
+  if ((clip.kind === "image" || clip.kind === "video") && clip.previewUrl) {
+    if (clip.kind === "image") {
+      return <div aria-label={clip.name} className="preview-media" role="img" style={{ backgroundImage: `url("${clip.previewUrl}")` }} />;
+    }
+
+    return <video className="preview-media" muted playsInline preload="metadata" ref={videoRef} src={clip.previewUrl} />;
+  }
+
+  return <span>{clip.name}</span>;
+};
+
+interface AudioPreviewProps {
+  clip: EditorClip;
+  localTime: number;
+  playback: "playing" | "paused" | "stopped";
+}
+
+const AudioPreview = ({ clip, localTime, playback }: AudioPreviewProps) => {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (clip.kind !== "audio" || !clip.previewUrl || !audioRef.current) return;
+    const audio = audioRef.current;
+    const target = Math.max(0, clip.timing.sourceIn + localTime);
+    audio.volume = clip.volume;
+    if (Math.abs(audio.currentTime - target) > 0.08) {
+      audio.currentTime = target;
+    }
+
+    if (playback === "playing") {
+      audio.play().catch(() => undefined);
+    } else {
+      audio.pause();
+    }
+  }, [clip, localTime, playback]);
+
+  if (clip.kind !== "audio" || !clip.previewUrl) {
+    return null;
+  }
+
+  return <audio preload="metadata" ref={audioRef} src={clip.previewUrl} />;
+};
 
 export const PreviewPlayer = () => {
   const project = useEditorStore((state) => state.project);
@@ -13,6 +81,7 @@ export const PreviewPlayer = () => {
   const setPlayback = useEditorStore((state) => state.setPlayback);
   const setPlayhead = useEditorStore((state) => state.setPlayhead);
   const layers = getRenderableLayers(project, playhead);
+  const activeAudioClips = project.clips.filter((clip) => clip.kind === "audio" && playhead >= clip.timing.start && playhead <= clip.timing.start + clip.timing.duration);
 
   useEffect(() => {
     if (playback !== "playing") {
@@ -59,9 +128,12 @@ export const PreviewPlayer = () => {
               {clip.kind === "text" ? (
                 <span style={{ color: clip.color, fontFamily: clip.fontFamily, fontSize: `${Math.max(12, clip.fontSize / 3)}px` }}>{clip.text}</span>
               ) : (
-                <span>{clip.name}</span>
+                <MediaPreview clip={clip} localTime={playhead - clip.timing.start} playback={playback} />
               )}
             </div>
+          ))}
+          {activeAudioClips.map((clip) => (
+            <AudioPreview clip={clip} key={clip.id} localTime={playhead - clip.timing.start} playback={playback} />
           ))}
         </div>
       </div>
