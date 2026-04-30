@@ -192,9 +192,10 @@ button {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   color: var(--text);
+  cursor: pointer;
   display: grid;
   gap: 10px;
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: 64px minmax(0, 1fr) 28px;
   min-height: 58px;
   padding: 6px;
   text-align: left;
@@ -258,6 +259,22 @@ button {
   color: var(--muted);
   font-size: 11px;
   text-transform: capitalize;
+}
+
+.media-add-button {
+  align-items: center;
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.media-add-button:hover {
+  border-color: var(--accent);
 }
 
 .preview-column {

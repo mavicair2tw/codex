@@ -75,4 +75,52 @@ describe("editor store timeline clip controls", () => {
     expect(useEditorStore.getState().project.settings.aspectRatio).toBe("1:1");
     expect(useEditorStore.getState().project.settings.canvas).toEqual({ width: 1080, height: 1080 });
   });
+
+  it("imports media assets into the gallery without creating timeline clips", () => {
+    useEditorStore.getState().importMediaAsset({
+      kind: "video",
+      name: "Opening shot",
+      sourcePath: "opening.mp4",
+      previewUrl: "blob:opening",
+      mimeType: "video/mp4",
+      duration: 4
+    });
+
+    expect(useEditorStore.getState().project.mediaAssets).toHaveLength(1);
+    expect(useEditorStore.getState().project.clips).toHaveLength(0);
+    expect(useEditorStore.getState().selectedAssetId).toBe(useEditorStore.getState().project.mediaAssets[0].id);
+    expect(useEditorStore.getState().selectedClipId).toBeNull();
+  });
+
+  it("adds gallery assets to the timeline on explicit request", () => {
+    useEditorStore.getState().importMediaAsset({
+      kind: "audio",
+      name: "Music bed",
+      sourcePath: "music.mp3",
+      previewUrl: "blob:music",
+      mimeType: "audio/mpeg",
+      duration: 6
+    });
+    const assetId = useEditorStore.getState().project.mediaAssets[0].id;
+
+    useEditorStore.getState().addAssetToTimeline(assetId);
+
+    expect(useEditorStore.getState().project.clips).toHaveLength(1);
+    expect(useEditorStore.getState().project.clips[0].kind).toBe("audio");
+    expect(useEditorStore.getState().selectedClipId).toBe(useEditorStore.getState().project.clips[0].id);
+    expect(useEditorStore.getState().selectedAssetId).toBeNull();
+  });
+
+  it("creates text assets in the gallery before timeline insertion", () => {
+    useEditorStore.getState().addTextAsset();
+
+    expect(useEditorStore.getState().project.mediaAssets).toHaveLength(1);
+    expect(useEditorStore.getState().project.mediaAssets[0].kind).toBe("text");
+    expect(useEditorStore.getState().project.clips).toHaveLength(0);
+
+    useEditorStore.getState().addAssetToTimeline(useEditorStore.getState().project.mediaAssets[0].id);
+
+    expect(useEditorStore.getState().project.clips).toHaveLength(1);
+    expect(useEditorStore.getState().project.clips[0].kind).toBe("text");
+  });
 });

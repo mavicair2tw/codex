@@ -118,12 +118,12 @@ export interface ExportJob {
 
 export interface MediaAsset {
   id: string;
-  clipId: string;
-  kind: Exclude<LayerKind, "text">;
+  kind: LayerKind;
   name: string;
-  sourcePath: string;
+  sourcePath?: string;
   previewUrl?: string;
   mimeType?: string;
   duration: number;
+  naturalSize?: Size;
   importedAt: string;
 }

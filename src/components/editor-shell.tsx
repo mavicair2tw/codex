@@ -12,8 +12,8 @@ import { readMediaFile, readMediaPath, type ImportedMediaFile } from "@/lib/medi
 import { useEditorStore } from "@/stores/editor-store";
 
 export const EditorShell = () => {
-  const addTextClip = useEditorStore((state) => state.addTextClip);
-  const importMediaClip = useEditorStore((state) => state.importMediaClip);
+  const addTextAsset = useEditorStore((state) => state.addTextAsset);
+  const importMediaAsset = useEditorStore((state) => state.importMediaAsset);
   const [importError, setImportError] = useState<string | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -26,7 +26,7 @@ export const EditorShell = () => {
 
     try {
       setImportError(null);
-      importMediaClip(await readMediaFile(file, kind));
+      importMediaAsset(await readMediaFile(file, kind));
     } catch (error) {
       setImportError(error instanceof Error ? error.message : "Import failed.");
     }
@@ -56,7 +56,7 @@ export const EditorShell = () => {
         ]
       });
       if (typeof selected !== "string") return;
-      importMediaClip(await readMediaPath(selected, kind));
+      importMediaAsset(await readMediaPath(selected, kind));
     } catch (error) {
       setImportError(error instanceof Error ? error.message : "Import failed.");
     }
@@ -76,7 +76,7 @@ export const EditorShell = () => {
           <button className="text-button" onClick={() => openImport("image", imageInputRef.current)} type="button">
             <ImageIcon size={16} /> Image
           </button>
-          <button className="text-button" onClick={addTextClip} type="button">
+          <button className="text-button" onClick={addTextAsset} type="button">
             <Type size={16} /> Text
           </button>
           <button className="text-button" onClick={() => openImport("audio", audioInputRef.current)} type="button">

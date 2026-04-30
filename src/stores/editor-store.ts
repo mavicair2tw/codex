@@ -10,10 +10,12 @@ import type { CanvasAspectRatio, EditorClip, EditorProject, ExportJob, ExportPre
 interface EditorState {
   project: EditorProject;
   selectedClipId: string | null;
+  selectedAssetId: string | null;
   playhead: number;
   playback: PlaybackState;
   exportJob: ExportJob;
   selectClip: (clipId: string | null) => void;
+  selectAsset: (assetId: string | null) => void;
   setPlayhead: (seconds: number) => void;
   jumpToTimelineStart: () => void;
   jumpToTimelineEnd: () => void;
@@ -36,7 +38,9 @@ interface EditorState {
   addImageClip: () => void;
   addVideoClip: () => void;
   addAudioClip: () => void;
-  importMediaClip: (file: ImportedMediaFile) => void;
+  addTextAsset: () => void;
+  importMediaAsset: (file: ImportedMediaFile) => void;
+  addAssetToTimeline: (assetId: string) => void;
   setExportPreset: (preset: ExportPreset) => void;
   setExportProgress: (progress: number, message: string) => void;
   setExportStatus: (status: ExportJob["status"], message?: string) => void;
@@ -57,11 +61,14 @@ const patchClip = (clip: EditorClip, patch: Partial<EditorClip>): EditorClip => 
 export const useEditorStore = create<EditorState>((set, get) => ({
   project: sampleProject,
   selectedClipId: sampleProject.clips[0]?.id ?? null,
+  selectedAssetId: null,
   playhead: 0,
   playback: "stopped",
   exportJob: createExportJob(),
 
-  selectClip: (clipId) => set({ selectedClipId: clipId }),
+  selectClip: (clipId) => set({ selectedClipId: clipId, selectedAssetId: null }),
+
+  selectAsset: (assetId) => set({ selectedAssetId: assetId, selectedClipId: null }),
 
   setPlayhead: (seconds) =>
     set((state) => ({
@@ -293,30 +300,100 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((state) => ({ project: { ...state.project, clips: [...state.project.clips, clip] }, selectedClipId: clip.id }));
   },
 
-  importMediaClip: (file) => {
+  addTextAsset: () => {
+    const asset = {
+      id: makeId("asset"),
+      kind: "text" as const,
+      name: "Text Overlay",
+      duration: 5,
+      importedAt: new Date().toISOString()
+    };
+
+    set((state) => ({
+      project: {
+        ...state.project,
+        mediaAssets: [...state.project.mediaAssets, asset]
+      },
+      selectedAssetId: asset.id,
+      selectedClipId: null
+    }));
+  },
+
+  importMediaAsset: (file) => {
+    const asset = {
+      id: makeId("asset"),
+      kind: file.kind,
+      name: file.name,
+      sourcePath: file.sourcePath,
+      previewUrl: file.previewUrl,
+      mimeType: file.mimeType,
+      duration: file.duration,
+      naturalSize: file.naturalSize,
+      importedAt: new Date().toISOString()
+    };
+
+    set((state) => ({
+      project: {
+        ...state.project,
+        mediaAssets: [...state.project.mediaAssets, asset]
+      },
+      selectedAssetId: asset.id,
+      selectedClipId: null
+    }));
+  },
+
+  addAssetToTimeline: (assetId) => {
     const state = get();
-    const track = state.project.tracks.find((item) => item.kind === file.kind);
+    const asset = state.project.mediaAssets.find((item) => item.id === assetId);
+    if (!asset) return;
+
+    const track = state.project.tracks.find((item) => item.kind === asset.kind);
     if (!track) return;
 
     const start = state.playhead;
     const remainingDuration = Math.max(0.1, state.project.timeline.duration - start);
-    const duration = clamp(file.duration, 0.1, remainingDuration);
-    const sourceDuration = Math.max(0.1, file.duration);
-    const naturalSize = file.naturalSize ?? state.project.settings.canvas;
+    const duration = clamp(asset.duration, 0.1, remainingDuration);
+    const sourceDuration = Math.max(0.1, asset.duration);
+    const naturalSize = asset.naturalSize ?? state.project.settings.canvas;
+
+    if (asset.kind === "text") {
+      const clip: EditorClip = {
+        id: makeId("text"),
+        trackId: track.id,
+        kind: "text",
+        name: asset.name,
+        text: "New title",
+        fontSize: 56,
+        fontFamily: "Inter",
+        color: "#ffffff",
+        timing: { start, duration, sourceIn: 0, sourceDuration },
+        transform: { position: { x: 160, y: 760 }, size: { width: 720, height: 120 }, scale: 1, rotation: 0, opacity: 1 },
+        fades: { fadeIn: 0.3, fadeOut: 0.3 }
+      };
+
+      set((current) => ({
+        project: { ...current.project, clips: [...current.project.clips, clip] },
+        selectedClipId: clip.id,
+        selectedAssetId: null
+      }));
+      return;
+    }
+
+    if (!asset.sourcePath) return;
 
     const common = {
-      id: makeId(file.kind),
+      id: makeId(asset.kind),
       trackId: track.id,
-      name: file.name,
-      sourcePath: file.sourcePath,
-      previewUrl: file.previewUrl,
-      fileName: file.sourcePath,
-      mimeType: file.mimeType,
+      name: asset.name,
+      sourcePath: asset.sourcePath,
+      previewUrl: asset.previewUrl,
+      fileName: asset.sourcePath,
+      mimeType: asset.mimeType,
       timing: { start, duration, sourceIn: 0, sourceDuration },
       transform: {
-        position: { x: file.kind === "image" ? 160 : 0, y: file.kind === "image" ? 120 : 0 },
+        position: { x: asset.kind === "image" ? 160 : 0, y: asset.kind === "image" ? 120 : 0 },
         size:
-          file.kind === "image"
+          asset.kind === "image"
             ? { width: Math.min(naturalSize.width, 720), height: Math.min(naturalSize.height, 480) }
             : state.project.settings.canvas,
         scale: 1,
@@ -327,7 +404,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     };
 
     const clip: EditorClip =
-      file.kind === "audio"
+      asset.kind === "audio"
         ? {
             ...common,
             kind: "audio",
@@ -337,29 +414,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           }
         : {
             ...common,
-            kind: file.kind
+            kind: asset.kind
           };
 
     set((current) => ({
       project: {
         ...current.project,
-        clips: [...current.project.clips, clip],
-        mediaAssets: [
-          ...current.project.mediaAssets,
-          {
-            id: makeId("asset"),
-            clipId: clip.id,
-            kind: file.kind,
-            name: file.name,
-            sourcePath: file.sourcePath,
-            previewUrl: file.previewUrl,
-            mimeType: file.mimeType,
-            duration: file.duration,
-            importedAt: new Date().toISOString()
-          }
-        ]
+        clips: [...current.project.clips, clip]
       },
-      selectedClipId: clip.id
+      selectedClipId: clip.id,
+      selectedAssetId: null
     }));
   },
 

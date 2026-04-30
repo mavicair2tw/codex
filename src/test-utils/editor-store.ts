@@ -5,6 +5,7 @@ export const resetEditorStore = () => {
   useEditorStore.setState({
     project: structuredClone(sampleProject),
     selectedClipId: sampleProject.clips[0]?.id ?? null,
+    selectedAssetId: null,
     playhead: 0,
     playback: "stopped",
     exportJob: {
