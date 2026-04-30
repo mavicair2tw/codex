@@ -149,6 +149,7 @@ export const PreviewPlayer = () => {
   const playback = useEditorStore((state) => state.playback);
   const setPlayback = useEditorStore((state) => state.setPlayback);
   const setPlayhead = useEditorStore((state) => state.setPlayhead);
+  const setPreviewPlayhead = useEditorStore((state) => state.setPreviewPlayhead);
   const jumpToTimelineStart = useEditorStore((state) => state.jumpToTimelineStart);
   const jumpToTimelineEnd = useEditorStore((state) => state.jumpToTimelineEnd);
   const stepPlayheadBackward = useEditorStore((state) => state.stepPlayheadBackward);
@@ -216,7 +217,7 @@ export const PreviewPlayer = () => {
     const previewEnd = previewEndRef.current;
 
     if (previewEnd <= 0 || playheadRef.current >= previewEnd) {
-      setPlayhead(previewEnd);
+      setPreviewPlayhead(previewEnd);
       setPlayback("stopped");
       return;
     }
@@ -229,19 +230,19 @@ export const PreviewPlayer = () => {
 
       if (next >= currentPreviewEnd) {
         playheadRef.current = currentPreviewEnd;
-        setPlayhead(currentPreviewEnd);
+        setPreviewPlayhead(currentPreviewEnd);
         setPlayback("stopped");
         return;
       }
 
       playheadRef.current = next;
-      setPlayhead(next);
+      setPreviewPlayhead(next);
       animationFrame = requestAnimationFrame(tick);
     };
 
     animationFrame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animationFrame);
-  }, [playback, setPlayback, setPlayhead]);
+  }, [playback, setPlayback, setPreviewPlayhead]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

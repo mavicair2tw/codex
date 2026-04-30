@@ -17,6 +17,7 @@ interface EditorState {
   selectClip: (clipId: string | null) => void;
   selectAsset: (assetId: string | null) => void;
   setPlayhead: (seconds: number) => void;
+  setPreviewPlayhead: (seconds: number) => void;
   jumpToTimelineStart: () => void;
   jumpToTimelineEnd: () => void;
   stepPlayheadBackward: () => void;
@@ -74,6 +75,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setPlayhead: (seconds) =>
     set((state) => ({
       playhead: snapTime(seconds, state.project.timeline)
+    })),
+
+  setPreviewPlayhead: (seconds) =>
+    set((state) => ({
+      playhead: clamp(seconds, 0, state.project.timeline.duration)
     })),
 
   jumpToTimelineStart: () => set({ playhead: 0 }),

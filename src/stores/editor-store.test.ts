@@ -76,6 +76,14 @@ describe("editor store timeline clip controls", () => {
     expect(useEditorStore.getState().project.settings.canvas).toEqual({ width: 1080, height: 1080 });
   });
 
+  it("keeps preview playhead movement unsnapped for stable playback timing", () => {
+    useEditorStore.getState().setPlayhead(0.12);
+    expect(useEditorStore.getState().playhead).not.toBe(0.12);
+
+    useEditorStore.getState().setPreviewPlayhead(0.12);
+    expect(useEditorStore.getState().playhead).toBe(0.12);
+  });
+
   it("imports media assets into the gallery without creating timeline clips", () => {
     useEditorStore.getState().importMediaAsset({
       kind: "video",

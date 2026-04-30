@@ -144,6 +144,43 @@ describe("PreviewPlayer", () => {
     expect(useEditorStore.getState().playhead).toBeGreaterThan(2);
   });
 
+  it("advances preview playback without snapping to the edit grid", () => {
+    vi.useFakeTimers();
+    const clip: EditorClip = {
+      id: "audio-clock",
+      trackId: "track-audio-1",
+      kind: "audio",
+      name: "Audio clock",
+      sourcePath: "clock.mp3",
+      previewUrl: "blob:audio-clock",
+      volume: 1,
+      volumeFadeIn: 0,
+      volumeFadeOut: 0,
+      timing: { start: 0, duration: 5, sourceIn: 0, sourceDuration: 5 },
+      transform: {
+        position: { x: 0, y: 0 },
+        size: { width: 1920, height: 1080 },
+        scale: 1,
+        rotation: 0,
+        opacity: 1
+      },
+      fades: { fadeIn: 0, fadeOut: 0 }
+    };
+    useEditorStore.setState((state) => ({
+      project: { ...state.project, clips: [clip] }
+    }));
+
+    render(<PreviewPlayer />);
+    fireEvent.click(screen.getByRole("button", { name: /play preview/i }));
+    act(() => {
+      vi.advanceTimersByTime(80);
+    });
+
+    const playhead = useEditorStore.getState().playhead;
+    expect(playhead).toBeGreaterThan(0);
+    expect(playhead).toBeLessThan(0.25);
+  });
+
   it("does not restart or seek video on every playhead tick during normal playback", () => {
     const clip: EditorClip = {
       id: "stable-video",
