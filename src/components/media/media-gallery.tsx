@@ -31,10 +31,13 @@ export const MediaGallery = () => {
 
   const selectAsset = (asset: MediaAsset) => {
     const clip = clips.find((item) => item.id === asset.clipId);
-    selectClip(asset.clipId);
-    if (clip) {
-      setPlayhead(clip.timing.start);
+    if (!clip) {
+      selectClip(null);
+      return;
     }
+
+    selectClip(asset.clipId);
+    setPlayhead(clip.timing.start);
   };
 
   return (

@@ -23,6 +23,8 @@ interface EditorState {
   toggleSnap: () => void;
   moveClip: (clipId: string, start: number, trackId?: string) => void;
   trimClip: (clipId: string, edge: "start" | "end", time: number) => void;
+  deleteClip: (clipId: string) => void;
+  toggleClipMute: (clipId: string) => void;
   updateClip: (clipId: string, patch: Partial<EditorClip>) => void;
   addTextClip: () => void;
   addImageClip: () => void;
@@ -147,6 +149,32 @@ export const useEditorStore = create<EditorState>((set, get) => ({
               ...clip.timing,
               duration: clamp(nextEnd - clip.timing.start, 0.1, clip.timing.sourceDuration)
             }
+          };
+        })
+      }
+    })),
+
+  deleteClip: (clipId) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        clips: state.project.clips.filter((clip) => clip.id !== clipId)
+      },
+      selectedClipId: state.selectedClipId === clipId ? null : state.selectedClipId
+    })),
+
+  toggleClipMute: (clipId) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        clips: state.project.clips.map((clip) => {
+          if (clip.id !== clipId || (clip.kind !== "video" && clip.kind !== "audio")) {
+            return clip;
+          }
+
+          return {
+            ...clip,
+            muted: !clip.muted
           };
         })
       }

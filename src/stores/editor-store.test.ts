@@ -1,0 +1,66 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { resetEditorStore } from "@/test-utils/editor-store";
+import { useEditorStore } from "@/stores/editor-store";
+import type { EditorClip } from "@/types/editor";
+
+const makeClip = (id: string, kind: "video" | "audio" | "image" | "text"): EditorClip => {
+  const base = {
+    id,
+    trackId: `track-${kind}-1`,
+    name: `${kind} clip`,
+    timing: { start: 0, duration: 3, sourceIn: 0, sourceDuration: 3 },
+    transform: {
+      position: { x: 0, y: 0 },
+      size: { width: 320, height: 180 },
+      scale: 1,
+      rotation: 0,
+      opacity: 1
+    },
+    fades: { fadeIn: 0, fadeOut: 0 }
+  };
+
+  if (kind === "text") {
+    return { ...base, kind, text: "Title", fontSize: 32, fontFamily: "Inter", color: "#ffffff" };
+  }
+
+  if (kind === "audio") {
+    return { ...base, kind, sourcePath: "audio.wav", volume: 1, volumeFadeIn: 0, volumeFadeOut: 0 };
+  }
+
+  return { ...base, kind, sourcePath: `${kind}.mock` };
+};
+
+describe("editor store timeline clip controls", () => {
+  beforeEach(() => {
+    resetEditorStore();
+  });
+
+  it("deletes video, image, text, and audio clips from the timeline", () => {
+    const clips = [makeClip("video", "video"), makeClip("image", "image"), makeClip("text", "text"), makeClip("audio", "audio")];
+    useEditorStore.setState((state) => ({
+      project: { ...state.project, clips },
+      selectedClipId: "text"
+    }));
+
+    clips.forEach((clip) => useEditorStore.getState().deleteClip(clip.id));
+
+    expect(useEditorStore.getState().project.clips).toHaveLength(0);
+    expect(useEditorStore.getState().selectedClipId).toBeNull();
+  });
+
+  it("toggles mute only for video and audio clips", () => {
+    const clips = [makeClip("video", "video"), makeClip("audio", "audio"), makeClip("image", "image")];
+    useEditorStore.setState((state) => ({
+      project: { ...state.project, clips }
+    }));
+
+    useEditorStore.getState().toggleClipMute("video");
+    useEditorStore.getState().toggleClipMute("audio");
+    useEditorStore.getState().toggleClipMute("image");
+
+    const nextClips = useEditorStore.getState().project.clips;
+    expect(nextClips.find((clip) => clip.id === "video")?.muted).toBe(true);
+    expect(nextClips.find((clip) => clip.id === "audio")?.muted).toBe(true);
+    expect(nextClips.find((clip) => clip.id === "image")?.muted).toBeUndefined();
+  });
+});

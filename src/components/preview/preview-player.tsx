@@ -56,7 +56,7 @@ const AudioPreview = ({ clip, localTime, playback }: AudioPreviewProps) => {
     if (clip.kind !== "audio" || !clip.previewUrl || !audioRef.current) return;
     const audio = audioRef.current;
     const target = Math.max(0, clip.timing.sourceIn + localTime);
-    audio.volume = clip.volume;
+    audio.volume = clip.muted ? 0 : clip.volume;
     if (Math.abs(audio.currentTime - target) > 0.08) {
       audio.currentTime = target;
     }
@@ -68,7 +68,7 @@ const AudioPreview = ({ clip, localTime, playback }: AudioPreviewProps) => {
     }
   }, [clip, localTime, playback]);
 
-  if (clip.kind !== "audio" || !clip.previewUrl) {
+  if (clip.kind !== "audio" || !clip.previewUrl || clip.muted) {
     return null;
   }
 

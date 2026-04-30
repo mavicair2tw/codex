@@ -1,6 +1,6 @@
 "use client";
 
-import { Magnet, ZoomIn, ZoomOut } from "lucide-react";
+import { Magnet, Trash2, Volume2, VolumeX, ZoomIn, ZoomOut } from "lucide-react";
 import { useRef } from "react";
 import { formatTimecode, pixelsToSeconds, secondsToPixels } from "@/lib/time";
 import { useEditorStore } from "@/stores/editor-store";
@@ -30,6 +30,8 @@ export const TimelineEditor = () => {
   const toggleSnap = useEditorStore((state) => state.toggleSnap);
   const moveClip = useEditorStore((state) => state.moveClip);
   const trimClip = useEditorStore((state) => state.trimClip);
+  const deleteClip = useEditorStore((state) => state.deleteClip);
+  const toggleClipMute = useEditorStore((state) => state.toggleClipMute);
   const width = secondsToPixels(project.timeline.duration, project.timeline.zoom);
 
   const pointerToTime = (clientX: number) => {
@@ -71,6 +73,18 @@ export const TimelineEditor = () => {
       originStart: clip.timing.start,
       originDuration: clip.timing.duration
     };
+  };
+
+  const handleDeleteClip = (event: React.PointerEvent | React.MouseEvent, clipId: string) => {
+    event.stopPropagation();
+    dragRef.current = null;
+    deleteClip(clipId);
+  };
+
+  const handleToggleClipMute = (event: React.PointerEvent | React.MouseEvent, clipId: string) => {
+    event.stopPropagation();
+    dragRef.current = null;
+    toggleClipMute(clipId);
   };
 
   const rulerMarks = Array.from({ length: Math.floor(project.timeline.duration) + 1 }, (_, second) => second);
@@ -117,7 +131,7 @@ export const TimelineEditor = () => {
                     .filter((clip) => clip.trackId === track.id)
                     .map((clip) => (
                       <div
-                        className={`clip ${clip.kind} ${selectedClipId === clip.id ? "selected" : ""}`}
+                        className={`clip ${clip.kind} ${selectedClipId === clip.id ? "selected" : ""} ${clip.muted ? "muted" : ""}`}
                         key={clip.id}
                         onPointerDown={(event) => beginDrag(event, clip, "move")}
                         style={{
@@ -128,6 +142,30 @@ export const TimelineEditor = () => {
                       >
                         <span className="trim-handle left" onPointerDown={(event) => beginDrag(event, clip, "trim-start")} />
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{clip.name}</span>
+                        <span className="clip-actions">
+                          {(clip.kind === "video" || clip.kind === "audio") ? (
+                            <button
+                              aria-label={clip.muted ? `Unmute ${clip.name}` : `Mute ${clip.name}`}
+                              className="clip-action-button"
+                              onClick={(event) => handleToggleClipMute(event, clip.id)}
+                              onPointerDown={(event) => event.stopPropagation()}
+                              title={clip.muted ? "Unmute" : "Mute"}
+                              type="button"
+                            >
+                              {clip.muted ? <VolumeX size={12} /> : <Volume2 size={12} />}
+                            </button>
+                          ) : null}
+                          <button
+                            aria-label={`Delete ${clip.name}`}
+                            className="clip-action-button"
+                            onClick={(event) => handleDeleteClip(event, clip.id)}
+                            onPointerDown={(event) => event.stopPropagation()}
+                            title="Delete"
+                            type="button"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </span>
                         <span className="trim-handle right" onPointerDown={(event) => beginDrag(event, clip, "trim-end")} />
                       </div>
                     ))}

@@ -43,6 +43,7 @@ export interface BaseClip {
   transform: LayerTransform;
   fades: FadeSettings;
   locked?: boolean;
+  muted?: boolean;
 }
 
 export interface MediaClip extends BaseClip {
