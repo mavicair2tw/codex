@@ -2,6 +2,7 @@
 
 import { Pause, Play, Square } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { shouldTogglePlaybackFromKeyboard } from "@/lib/keyboard/transport-shortcuts";
 import { getRenderableLayers } from "@/lib/renderer/preview-engine";
 import { formatTimecode } from "@/lib/time";
 import { useEditorStore } from "@/stores/editor-store";
@@ -82,43 +83,48 @@ export const PreviewPlayer = () => {
   const setPlayhead = useEditorStore((state) => state.setPlayhead);
   const togglePlayback = useEditorStore((state) => state.togglePlayback);
   const stopPlayback = useEditorStore((state) => state.stopPlayback);
+  const playheadRef = useRef(playhead);
+  const durationRef = useRef(project.timeline.duration);
   const layers = getRenderableLayers(project, playhead);
   const activeAudioClips = project.clips.filter((clip) => clip.kind === "audio" && playhead >= clip.timing.start && playhead <= clip.timing.start + clip.timing.duration);
+
+  useEffect(() => {
+    playheadRef.current = playhead;
+  }, [playhead]);
+
+  useEffect(() => {
+    durationRef.current = project.timeline.duration;
+  }, [project.timeline.duration]);
 
   useEffect(() => {
     if (playback !== "playing") {
       return;
     }
 
-    let frame = 0;
+    let animationFrame = 0;
     let last = performance.now();
     const tick = (now: number) => {
       const delta = (now - last) / 1000;
       last = now;
-      const next = playhead + delta;
-      if (next >= project.timeline.duration) {
-        setPlayhead(project.timeline.duration);
+      const next = playheadRef.current + delta;
+      if (next >= durationRef.current) {
+        setPlayhead(durationRef.current);
         setPlayback("stopped");
         return;
       }
+
+      playheadRef.current = next;
       setPlayhead(next);
-      frame = requestAnimationFrame(tick);
+      animationFrame = requestAnimationFrame(tick);
     };
 
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [playback, playhead, project.timeline.duration, setPlayback, setPlayhead]);
+    animationFrame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [playback, setPlayback, setPlayhead]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target;
-      const isTyping =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement ||
-        (target instanceof HTMLElement && target.isContentEditable);
-
-      if (isTyping || event.code !== "Space" || event.repeat) {
+      if (!shouldTogglePlaybackFromKeyboard(event)) {
         return;
       }
 
@@ -162,10 +168,11 @@ export const PreviewPlayer = () => {
       </div>
       <div className="transport">
         <div className="toolbar">
-          <button className="icon-button" onClick={togglePlayback} title={playback === "playing" ? "Pause" : "Play"} type="button">
+          <button aria-label={playback === "playing" ? "Pause preview" : "Play preview"} className="icon-button" onClick={togglePlayback} title={playback === "playing" ? "Pause" : "Play"} type="button">
             {playback === "playing" ? <Pause size={16} /> : <Play size={16} />}
           </button>
           <button
+            aria-label="Stop preview"
             className="icon-button"
             onClick={stopPlayback}
             title="Stop"

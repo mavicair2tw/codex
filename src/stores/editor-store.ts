@@ -16,6 +16,8 @@ interface EditorState {
   setPlayhead: (seconds: number) => void;
   setPlayback: (playback: PlaybackState) => void;
   togglePlayback: () => void;
+  playPreview: () => void;
+  pausePreview: () => void;
   stopPlayback: () => void;
   setZoom: (zoom: number) => void;
   toggleSnap: () => void;
@@ -64,6 +66,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((state) => ({
       playback: state.playback === "playing" ? "paused" : "playing"
     })),
+
+  playPreview: () => set({ playback: "playing" }),
+
+  pausePreview: () => set({ playback: "paused" }),
 
   stopPlayback: () => set({ playback: "stopped", playhead: 0 }),
 
