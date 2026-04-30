@@ -338,6 +338,97 @@ describe("PreviewPlayer", () => {
     expect(useEditorStore.getState().playhead).toBeCloseTo(4);
   });
 
+  it("stops audio playback when visible timeline content ends", () => {
+    vi.useFakeTimers();
+    const videoClip: EditorClip = {
+      id: "short-video-with-audio",
+      trackId: "track-video-1",
+      kind: "video",
+      name: "Short video",
+      sourcePath: "short.mp4",
+      previewUrl: "blob:short-video",
+      timing: { start: 0, duration: 4, sourceIn: 0, sourceDuration: 4 },
+      transform: {
+        position: { x: 0, y: 0 },
+        size: { width: 1920, height: 1080 },
+        scale: 1,
+        rotation: 0,
+        opacity: 1
+      },
+      fades: { fadeIn: 0, fadeOut: 0 }
+    };
+    const audioClip: EditorClip = {
+      id: "long-audio",
+      trackId: "track-audio-1",
+      kind: "audio",
+      name: "Long audio",
+      sourcePath: "long.mp3",
+      previewUrl: "blob:long-audio",
+      volume: 1,
+      volumeFadeIn: 0,
+      volumeFadeOut: 0,
+      timing: { start: 0, duration: 10, sourceIn: 0, sourceDuration: 10 },
+      transform: {
+        position: { x: 0, y: 0 },
+        size: { width: 1920, height: 1080 },
+        scale: 1,
+        rotation: 0,
+        opacity: 1
+      },
+      fades: { fadeIn: 0, fadeOut: 0 }
+    };
+    useEditorStore.setState((state) => ({
+      project: { ...state.project, clips: [videoClip, audioClip] },
+      playhead: 3.8
+    }));
+
+    render(<PreviewPlayer />);
+    fireEvent.click(screen.getByRole("button", { name: /play preview/i }));
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
+
+    expect(useEditorStore.getState().playback).toBe("stopped");
+    expect(useEditorStore.getState().playhead).toBeCloseTo(4);
+  });
+
+  it("allows audio-only timelines to play through audio content", () => {
+    vi.useFakeTimers();
+    const audioClip: EditorClip = {
+      id: "audio-only",
+      trackId: "track-audio-1",
+      kind: "audio",
+      name: "Audio only",
+      sourcePath: "audio.mp3",
+      previewUrl: "blob:audio-only",
+      volume: 1,
+      volumeFadeIn: 0,
+      volumeFadeOut: 0,
+      timing: { start: 0, duration: 6, sourceIn: 0, sourceDuration: 6 },
+      transform: {
+        position: { x: 0, y: 0 },
+        size: { width: 1920, height: 1080 },
+        scale: 1,
+        rotation: 0,
+        opacity: 1
+      },
+      fades: { fadeIn: 0, fadeOut: 0 }
+    };
+    useEditorStore.setState((state) => ({
+      project: { ...state.project, clips: [audioClip] },
+      playhead: 3.8
+    }));
+
+    render(<PreviewPlayer />);
+    fireEvent.click(screen.getByRole("button", { name: /play preview/i }));
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
+
+    expect(useEditorStore.getState().playback).toBe("playing");
+    expect(useEditorStore.getState().playhead).toBeGreaterThan(4);
+  });
+
   it("does not play an empty timeline", () => {
     vi.useFakeTimers();
     render(<PreviewPlayer />);
