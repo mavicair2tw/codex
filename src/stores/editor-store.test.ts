@@ -177,6 +177,63 @@ describe("editor store timeline clip controls", () => {
     expect(useEditorStore.getState().selectedAssetId).toBeNull();
   });
 
+  it("adds gallery assets aligned to the selected timeline clip start", () => {
+    useEditorStore.setState({ playhead: 5 });
+    useEditorStore.getState().importMediaAsset({
+      kind: "video",
+      name: "Main shot",
+      sourcePath: "main.mp4",
+      previewUrl: "blob:main",
+      mimeType: "video/mp4",
+      duration: 4
+    });
+    const videoAssetId = useEditorStore.getState().project.mediaAssets[0].id;
+    useEditorStore.getState().addAssetToTimeline(videoAssetId);
+    const videoClip = useEditorStore.getState().project.clips[0];
+
+    useEditorStore.setState({ playhead: 9 });
+    useEditorStore.getState().importMediaAsset({
+      kind: "audio",
+      name: "Music bed",
+      sourcePath: "music.mp3",
+      previewUrl: "blob:music",
+      mimeType: "audio/mpeg",
+      duration: 4
+    });
+    useEditorStore.getState().addTextAsset();
+    const audioAssetId = useEditorStore.getState().project.mediaAssets.find((asset) => asset.kind === "audio")?.id;
+    const textAssetId = useEditorStore.getState().project.mediaAssets.find((asset) => asset.kind === "text")?.id;
+
+    if (!audioAssetId || !textAssetId) {
+      throw new Error("Expected audio and text assets.");
+    }
+
+    useEditorStore.getState().addAssetToTimeline(audioAssetId);
+    useEditorStore.getState().selectClip(videoClip.id);
+    useEditorStore.getState().addAssetToTimeline(textAssetId);
+
+    const clips = useEditorStore.getState().project.clips;
+    expect(clips).toHaveLength(3);
+    expect(clips.map((clip) => clip.timing.start)).toEqual([5, 5, 5]);
+    expect(new Set(clips.map((clip) => clip.trackId)).size).toBe(3);
+  });
+
+  it("falls back to the playhead when no timeline clip is selected", () => {
+    useEditorStore.setState({ playhead: 7, selectedClipId: null });
+    useEditorStore.getState().importMediaAsset({
+      kind: "image",
+      name: "Overlay",
+      sourcePath: "overlay.png",
+      previewUrl: "blob:overlay",
+      mimeType: "image/png",
+      duration: 3
+    });
+
+    useEditorStore.getState().addAssetToTimeline(useEditorStore.getState().project.mediaAssets[0].id);
+
+    expect(useEditorStore.getState().project.clips[0].timing.start).toBe(7);
+  });
+
   it("creates text assets in the gallery before timeline insertion", () => {
     useEditorStore.getState().addTextAsset();
 

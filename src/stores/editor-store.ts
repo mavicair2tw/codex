@@ -61,6 +61,11 @@ const createExportJob = (): ExportJob => ({
 
 const patchClip = (clip: EditorClip, patch: Partial<EditorClip>): EditorClip => ({ ...clip, ...patch } as EditorClip);
 
+const getTimelineInsertionStart = (project: EditorProject, selectedClipId: string | null, playhead: number) => {
+  const selectedClip = selectedClipId ? project.clips.find((clip) => clip.id === selectedClipId) : undefined;
+  return selectedClip?.timing.start ?? playhead;
+};
+
 export const useEditorStore = create<EditorState>((set, get) => ({
   project: sampleProject,
   selectedClipId: sampleProject.clips[0]?.id ?? null,
@@ -71,7 +76,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   selectClip: (clipId) => set({ selectedClipId: clipId, selectedAssetId: null }),
 
-  selectAsset: (assetId) => set({ selectedAssetId: assetId, selectedClipId: null }),
+  selectAsset: (assetId) => set({ selectedAssetId: assetId }),
 
   setPlayhead: (seconds) =>
     set((state) => ({
@@ -375,7 +380,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         mediaAssets: [...state.project.mediaAssets, asset]
       },
       selectedAssetId: asset.id,
-      selectedClipId: null
+      selectedClipId: state.selectedClipId
     }));
   },
 
@@ -398,7 +403,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         mediaAssets: [...state.project.mediaAssets, asset]
       },
       selectedAssetId: asset.id,
-      selectedClipId: null
+      selectedClipId: state.selectedClipId
     }));
   },
 
@@ -410,7 +415,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const track = state.project.tracks.find((item) => item.kind === asset.kind);
     if (!track) return;
 
-    const start = state.playhead;
+    const start = getTimelineInsertionStart(state.project, state.selectedClipId, state.playhead);
     const remainingDuration = Math.max(0.1, state.project.timeline.duration - start);
     const duration = clamp(asset.duration, 0.1, remainingDuration);
     const sourceDuration = Math.max(0.1, asset.duration);
