@@ -41,6 +41,7 @@ interface EditorState {
   addTextAsset: () => void;
   importMediaAsset: (file: ImportedMediaFile) => void;
   addAssetToTimeline: (assetId: string) => void;
+  removeMediaAsset: (assetId: string) => void;
   setExportPreset: (preset: ExportPreset) => void;
   setExportProgress: (progress: number, message: string) => void;
   setExportStatus: (status: ExportJob["status"], message?: string) => void;
@@ -426,6 +427,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       selectedAssetId: null
     }));
   },
+
+  removeMediaAsset: (assetId) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        mediaAssets: state.project.mediaAssets.filter((asset) => asset.id !== assetId)
+      },
+      selectedAssetId: state.selectedAssetId === assetId ? null : state.selectedAssetId
+    })),
 
   setExportPreset: (preset) => set((state) => ({ exportJob: { ...state.exportJob, preset } })),
   setExportProgress: (progress, message) => set((state) => ({ exportJob: { ...state.exportJob, progress, message } })),

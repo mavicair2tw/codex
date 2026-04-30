@@ -80,4 +80,25 @@ describe("MediaGallery", () => {
     expect(useEditorStore.getState().selectedClipId).toBe(useEditorStore.getState().project.clips[0].id);
     expect(useEditorStore.getState().selectedAssetId).toBeNull();
   });
+
+  it("removes image, video, audio, and text assets from the gallery", () => {
+    const mediaAssets = [makeAsset("image", "image"), makeAsset("video", "video"), makeAsset("audio", "audio"), makeAsset("text", "text")];
+    useEditorStore.setState((state) => ({
+      project: {
+        ...state.project,
+        mediaAssets
+      },
+      selectedAssetId: mediaAssets[0].id
+    }));
+
+    render(<MediaGallery />);
+
+    mediaAssets.forEach((asset) => {
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(`remove ${asset.name} from gallery`, "i") }));
+    });
+
+    expect(useEditorStore.getState().project.mediaAssets).toHaveLength(0);
+    expect(useEditorStore.getState().selectedAssetId).toBeNull();
+    expect(screen.getByText(/no imports yet/i)).toBeInTheDocument();
+  });
 });

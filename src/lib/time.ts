@@ -37,3 +37,11 @@ export const getClipOpacityAtTime = (clipStart: number, duration: number, fadeIn
 
   return opacity * Math.min(fadeInValue, fadeOutValue);
 };
+
+export const getFadeMultiplierAtLocalTime = (localTime: number, duration: number, fadeIn: number, fadeOut: number) => {
+  const fadeInValue = fadeIn > 0 ? clamp(localTime / fadeIn, 0, 1) : 1;
+  const fadeOutStart = duration - fadeOut;
+  const fadeOutValue = fadeOut > 0 && localTime > fadeOutStart ? clamp((duration - localTime) / fadeOut, 0, 1) : 1;
+
+  return Math.min(fadeInValue, fadeOutValue);
+};

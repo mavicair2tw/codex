@@ -1,6 +1,6 @@
 "use client";
 
-import { FileAudio, Film, ImageIcon, Plus, Type } from "lucide-react";
+import { FileAudio, Film, ImageIcon, Plus, Trash2, Type } from "lucide-react";
 import { formatTimecode } from "@/lib/time";
 import { useEditorStore } from "@/stores/editor-store";
 import type { MediaAsset } from "@/types/editor";
@@ -27,6 +27,7 @@ export const MediaGallery = () => {
   const selectedAssetId = useEditorStore((state) => state.selectedAssetId);
   const selectAsset = useEditorStore((state) => state.selectAsset);
   const addAssetToTimeline = useEditorStore((state) => state.addAssetToTimeline);
+  const removeMediaAsset = useEditorStore((state) => state.removeMediaAsset);
 
   return (
     <aside className="media-gallery" aria-label="Imported media gallery">
@@ -60,18 +61,32 @@ export const MediaGallery = () => {
                   {asset.kind} · {formatTimecode(asset.duration, fps)}
                 </span>
               </span>
-              <button
-                aria-label={`Add ${asset.name} to timeline`}
-                className="media-add-button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  addAssetToTimeline(asset.id);
-                }}
-                title="Add to timeline"
-                type="button"
-              >
-                <Plus size={16} />
-              </button>
+              <span className="media-actions">
+                <button
+                  aria-label={`Add ${asset.name} to timeline`}
+                  className="media-action-button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    addAssetToTimeline(asset.id);
+                  }}
+                  title="Add to timeline"
+                  type="button"
+                >
+                  <Plus size={16} />
+                </button>
+                <button
+                  aria-label={`Remove ${asset.name} from gallery`}
+                  className="media-action-button danger"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    removeMediaAsset(asset.id);
+                  }}
+                  title="Remove from gallery"
+                  type="button"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </span>
             </div>
           ))}
         </div>

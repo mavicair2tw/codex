@@ -123,4 +123,24 @@ describe("editor store timeline clip controls", () => {
     expect(useEditorStore.getState().project.clips).toHaveLength(1);
     expect(useEditorStore.getState().project.clips[0].kind).toBe("text");
   });
+
+  it("removes selected gallery assets without deleting existing timeline clips", () => {
+    useEditorStore.getState().importMediaAsset({
+      kind: "image",
+      name: "Logo",
+      sourcePath: "logo.png",
+      previewUrl: "blob:logo",
+      mimeType: "image/png",
+      duration: 5
+    });
+    const assetId = useEditorStore.getState().project.mediaAssets[0].id;
+    useEditorStore.getState().addAssetToTimeline(assetId);
+
+    useEditorStore.getState().selectAsset(assetId);
+    useEditorStore.getState().removeMediaAsset(assetId);
+
+    expect(useEditorStore.getState().project.mediaAssets).toHaveLength(0);
+    expect(useEditorStore.getState().project.clips).toHaveLength(1);
+    expect(useEditorStore.getState().selectedAssetId).toBeNull();
+  });
 });

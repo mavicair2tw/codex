@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { shouldTogglePlaybackFromKeyboard } from "@/lib/keyboard/transport-shortcuts";
 import { getPreviewPlaybackBounds } from "@/lib/preview/playback-bounds";
 import { getRenderableLayers } from "@/lib/renderer/preview-engine";
-import { formatTimecode } from "@/lib/time";
+import { formatTimecode, getFadeMultiplierAtLocalTime } from "@/lib/time";
 import { useEditorStore } from "@/stores/editor-store";
 import type { EditorClip } from "@/types/editor";
 
@@ -57,7 +57,13 @@ const AudioPreview = ({ clip, localTime, playback }: AudioPreviewProps) => {
     if (clip.kind !== "audio" || !clip.previewUrl || !audioRef.current) return;
     const audio = audioRef.current;
     const target = Math.max(0, clip.timing.sourceIn + localTime);
-    audio.volume = clip.muted ? 0 : clip.volume;
+    const fadeMultiplier = getFadeMultiplierAtLocalTime(
+      localTime,
+      clip.timing.duration,
+      Math.max(clip.fades.fadeIn, clip.volumeFadeIn),
+      Math.max(clip.fades.fadeOut, clip.volumeFadeOut)
+    );
+    audio.volume = clip.muted ? 0 : Math.min(1, clip.volume * fadeMultiplier);
     if (Math.abs(audio.currentTime - target) > 0.08) {
       audio.currentTime = target;
     }

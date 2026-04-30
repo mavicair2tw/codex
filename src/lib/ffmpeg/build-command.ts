@@ -11,19 +11,43 @@ const escapeDrawtext = (value: string) => value.replace(/\\/g, "\\\\").replace(/
 
 const clipEnable = (clip: EditorClip) => `between(t,${clip.timing.start.toFixed(3)},${(clip.timing.start + clip.timing.duration).toFixed(3)})`;
 
-const opacityExpression = (clip: EditorClip) => {
+const clampFadeDuration = (fade: number, duration: number) => Math.max(0, Math.min(fade, duration));
+
+const visualFadeFilters = (clip: EditorClip) => {
+  const filters: string[] = [];
+  const fadeIn = clampFadeDuration(clip.fades.fadeIn, clip.timing.duration);
+  const fadeOut = clampFadeDuration(clip.fades.fadeOut, clip.timing.duration);
+
+  if (fadeIn > 0) {
+    filters.push(`fade=t=in:st=0:d=${fadeIn.toFixed(3)}:alpha=1`);
+  }
+
+  if (fadeOut > 0) {
+    filters.push(`fade=t=out:st=${Math.max(0, clip.timing.duration - fadeOut).toFixed(3)}:d=${fadeOut.toFixed(3)}:alpha=1`);
+  }
+
+  if (clip.transform.opacity < 1) {
+    filters.push(`colorchannelmixer=aa=${clip.transform.opacity.toFixed(3)}`);
+  }
+
+  return filters;
+};
+
+const textOpacityExpression = (clip: EditorClip) => {
   const start = clip.timing.start;
   const end = clip.timing.start + clip.timing.duration;
-  const fadeInEnd = start + clip.fades.fadeIn;
-  const fadeOutStart = end - clip.fades.fadeOut;
+  const fadeIn = clampFadeDuration(clip.fades.fadeIn, clip.timing.duration);
+  const fadeOut = clampFadeDuration(clip.fades.fadeOut, clip.timing.duration);
+  const fadeInEnd = start + fadeIn;
+  const fadeOutStart = end - fadeOut;
 
-  if (clip.fades.fadeIn <= 0 && clip.fades.fadeOut <= 0) {
+  if (fadeIn <= 0 && fadeOut <= 0) {
     return clip.transform.opacity.toFixed(3);
   }
 
   const baseOpacity = clip.transform.opacity.toFixed(3);
-  const fadeIn = clip.fades.fadeIn > 0 ? `if(lt(t\\,${fadeInEnd.toFixed(3)})\\,((t-${start.toFixed(3)})/${clip.fades.fadeIn.toFixed(3)})*${baseOpacity}\\,${baseOpacity})` : baseOpacity;
-  return clip.fades.fadeOut > 0 ? `if(gt(t\\,${fadeOutStart.toFixed(3)})\\,((${end.toFixed(3)}-t)/${clip.fades.fadeOut.toFixed(3)})*${baseOpacity}\\,${fadeIn})` : fadeIn;
+  const fadeInExpression = fadeIn > 0 ? `if(lt(t\\,${fadeInEnd.toFixed(3)})\\,((t-${start.toFixed(3)})/${fadeIn.toFixed(3)})*${baseOpacity}\\,${baseOpacity})` : baseOpacity;
+  return fadeOut > 0 ? `if(gt(t\\,${fadeOutStart.toFixed(3)})\\,((${end.toFixed(3)}-t)/${fadeOut.toFixed(3)})*${baseOpacity}\\,${fadeInExpression})` : fadeInExpression;
 };
 
 const inputClips = (project: EditorProject) => project.clips.filter((clip) => clip.kind !== "text");
@@ -40,7 +64,7 @@ const buildVideoFilters = (project: EditorProject, preset: ExportPreset) => {
 
     if (clip.kind === "text") {
       const text = escapeDrawtext(clip.text);
-      const alpha = opacityExpression(clip);
+      const alpha = textOpacityExpression(clip);
       filters.push(
         `[${currentLabel}]drawtext=text='${text}':font='${escapeDrawtext(clip.fontFamily)}':fontsize=${clip.fontSize}:fontcolor=${clip.color}:x=${clip.transform.position.x}:y=${clip.transform.position.y}:alpha='${alpha}':enable='${clipEnable(clip)}'[${nextLabel}]`
       );
@@ -50,9 +74,9 @@ const buildVideoFilters = (project: EditorProject, preset: ExportPreset) => {
 
     const inputLabel = `${mediaInputIndex}:v`;
     const layerLabel = `layer${visualIndex}`;
-    const alpha = opacityExpression(clip);
+    const fadeFilters = visualFadeFilters(clip);
     filters.push(
-      `[${inputLabel}]trim=start=${clip.timing.sourceIn}:duration=${clip.timing.duration},setpts=PTS-STARTPTS+${clip.timing.start}/TB,scale=${clip.transform.size.width}:${clip.transform.size.height},format=rgba,colorchannelmixer=aa='${alpha}'[${layerLabel}]`
+      `[${inputLabel}]trim=start=${clip.timing.sourceIn}:duration=${clip.timing.duration},setpts=PTS-STARTPTS,scale=${clip.transform.size.width}:${clip.transform.size.height},format=rgba${fadeFilters.length ? "," + fadeFilters.join(",") : ""},setpts=PTS+${clip.timing.start}/TB[${layerLabel}]`
     );
     filters.push(
       `[${currentLabel}][${layerLabel}]overlay=x=${clip.transform.position.x}:y=${clip.transform.position.y}:enable='${clipEnable(clip)}'[${nextLabel}]`
@@ -77,12 +101,11 @@ const buildAudioFilters = (project: EditorProject) => {
 
   const filters = audioInputs.map(({ clip, index }, audioIndex) => {
     const volume = clip.kind === "audio" ? clip.volume : 1;
-    const fadeIn = clip.kind === "audio" ? clip.volumeFadeIn : 0;
-    const fadeOut = clip.kind === "audio" ? clip.volumeFadeOut : 0;
-    const end = clip.timing.start + clip.timing.duration;
+    const fadeIn = clampFadeDuration(clip.kind === "audio" ? Math.max(clip.volumeFadeIn, clip.fades.fadeIn) : clip.fades.fadeIn, clip.timing.duration);
+    const fadeOut = clampFadeDuration(clip.kind === "audio" ? Math.max(clip.volumeFadeOut, clip.fades.fadeOut) : clip.fades.fadeOut, clip.timing.duration);
     const fades = [
-      fadeIn > 0 ? `afade=t=in:st=${clip.timing.start}:d=${fadeIn}` : "",
-      fadeOut > 0 ? `afade=t=out:st=${Math.max(clip.timing.start, end - fadeOut)}:d=${fadeOut}` : ""
+      fadeIn > 0 ? `afade=t=in:st=0:d=${fadeIn.toFixed(3)}` : "",
+      fadeOut > 0 ? `afade=t=out:st=${Math.max(0, clip.timing.duration - fadeOut).toFixed(3)}:d=${fadeOut.toFixed(3)}` : ""
     ].filter(Boolean);
 
     return `[${index}:a]atrim=start=${clip.timing.sourceIn}:duration=${clip.timing.duration},asetpts=PTS-STARTPTS,adelay=${Math.round(clip.timing.start * 1000)}|${Math.round(clip.timing.start * 1000)},volume=${volume}${fades.length ? "," + fades.join(",") : ""}[a${audioIndex}]`;
