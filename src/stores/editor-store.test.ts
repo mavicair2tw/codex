@@ -48,6 +48,64 @@ describe("editor store timeline clip controls", () => {
     expect(useEditorStore.getState().selectedClipId).toBeNull();
   });
 
+  it("trims the start and end of video, image, text, and audio clips", () => {
+    const clips = [makeClip("video", "video"), makeClip("image", "image"), makeClip("text", "text"), makeClip("audio", "audio")];
+    useEditorStore.setState((state) => ({
+      project: { ...state.project, clips }
+    }));
+
+    clips.forEach((clip) => {
+      useEditorStore.getState().trimClip(clip.id, "start", 1);
+      useEditorStore.getState().trimClip(clip.id, "end", 2);
+    });
+
+    const nextClips = useEditorStore.getState().project.clips;
+    nextClips.forEach((clip) => {
+      expect(clip.timing.start).toBe(1);
+      expect(clip.timing.duration).toBe(1);
+      expect(clip.timing.sourceIn).toBe(1);
+    });
+  });
+
+  it("splits video, image, text, and audio clips at the playhead", () => {
+    const kinds = ["video", "image", "text", "audio"] as const;
+
+    kinds.forEach((kind) => {
+      resetEditorStore();
+      const clip = makeClip(`${kind}-split`, kind);
+      useEditorStore.setState((state) => ({
+        project: { ...state.project, clips: [clip] }
+      }));
+      useEditorStore.getState().setPreviewPlayhead(1.2);
+
+      useEditorStore.getState().splitClipAtPlayhead(clip.id);
+
+      const nextClips = useEditorStore.getState().project.clips;
+      expect(nextClips).toHaveLength(2);
+      const [leftClip, rightClip] = nextClips;
+      expect(leftClip.kind).toBe(kind);
+      expect(rightClip.kind).toBe(kind);
+      expect(leftClip.timing.start).toBe(0);
+      expect(leftClip.timing.duration).toBe(1.2);
+      expect(rightClip.timing.start).toBe(1.2);
+      expect(rightClip.timing.duration).toBe(1.8);
+      expect(rightClip.timing.sourceIn).toBe(1.2);
+      expect(useEditorStore.getState().selectedClipId).toBe(rightClip.id);
+    });
+  });
+
+  it("does not split clips when the playhead is outside the clip body", () => {
+    const clip = makeClip("video", "video");
+    useEditorStore.setState((state) => ({
+      project: { ...state.project, clips: [clip] }
+    }));
+
+    useEditorStore.getState().setPreviewPlayhead(3);
+    useEditorStore.getState().splitClipAtPlayhead(clip.id);
+
+    expect(useEditorStore.getState().project.clips).toHaveLength(1);
+  });
+
   it("toggles mute only for video and audio clips", () => {
     const clips = [makeClip("video", "video"), makeClip("audio", "audio"), makeClip("image", "image")];
     useEditorStore.setState((state) => ({

@@ -31,6 +31,7 @@ interface EditorState {
   toggleSnap: () => void;
   moveClip: (clipId: string, start: number, trackId?: string) => void;
   trimClip: (clipId: string, edge: "start" | "end", time: number) => void;
+  splitClipAtPlayhead: (clipId: string) => void;
   deleteClip: (clipId: string) => void;
   toggleClipMute: (clipId: string) => void;
   updateClip: (clipId: string, patch: Partial<EditorClip>) => void;
@@ -190,6 +191,58 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         })
       }
     })),
+
+  splitClipAtPlayhead: (clipId) =>
+    set((state) => {
+      const clip = state.project.clips.find((item) => item.id === clipId);
+      if (!clip) {
+        return state;
+      }
+
+      const splitAt = clamp(roundToFrame(state.playhead, state.project.timeline.fps), 0, state.project.timeline.duration);
+      const clipStart = clip.timing.start;
+      const clipEnd = clip.timing.start + clip.timing.duration;
+      const minSegmentDuration = 1 / state.project.timeline.fps;
+
+      if (splitAt <= clipStart + minSegmentDuration || splitAt >= clipEnd - minSegmentDuration) {
+        return state;
+      }
+
+      const leftDuration = splitAt - clipStart;
+      const rightDuration = clipEnd - splitAt;
+      const rightClip: EditorClip = {
+        ...clip,
+        id: makeId(clip.kind),
+        name: `${clip.name} Copy`,
+        timing: {
+          ...clip.timing,
+          start: splitAt,
+          duration: rightDuration,
+          sourceIn: clamp(clip.timing.sourceIn + leftDuration, 0, clip.timing.sourceDuration)
+        }
+      };
+
+      return {
+        project: {
+          ...state.project,
+          clips: state.project.clips.flatMap((item) =>
+            item.id === clipId
+              ? [
+                  {
+                    ...item,
+                    timing: {
+                      ...item.timing,
+                      duration: leftDuration
+                    }
+                  },
+                  rightClip
+                ]
+              : [item]
+          )
+        },
+        selectedClipId: rightClip.id
+      };
+    }),
 
   deleteClip: (clipId) =>
     set((state) => ({

@@ -1,6 +1,6 @@
 "use client";
 
-import { Magnet, Trash2, Volume2, VolumeX, ZoomIn, ZoomOut } from "lucide-react";
+import { Magnet, Scissors, Trash2, Volume2, VolumeX, ZoomIn, ZoomOut } from "lucide-react";
 import { useRef } from "react";
 import { formatTimecode, pixelsToSeconds, secondsToPixels } from "@/lib/time";
 import { useEditorStore } from "@/stores/editor-store";
@@ -30,6 +30,7 @@ export const TimelineEditor = () => {
   const toggleSnap = useEditorStore((state) => state.toggleSnap);
   const moveClip = useEditorStore((state) => state.moveClip);
   const trimClip = useEditorStore((state) => state.trimClip);
+  const splitClipAtPlayhead = useEditorStore((state) => state.splitClipAtPlayhead);
   const deleteClip = useEditorStore((state) => state.deleteClip);
   const toggleClipMute = useEditorStore((state) => state.toggleClipMute);
   const width = secondsToPixels(project.timeline.duration, project.timeline.zoom);
@@ -87,6 +88,15 @@ export const TimelineEditor = () => {
     toggleClipMute(clipId);
   };
 
+  const handleSplitClip = (event: React.PointerEvent | React.MouseEvent, clipId: string) => {
+    event.stopPropagation();
+    dragRef.current = null;
+    splitClipAtPlayhead(clipId);
+  };
+
+  const selectedClip = project.clips.find((clip) => clip.id === selectedClipId);
+  const canSplitSelectedClip = selectedClip ? playhead > selectedClip.timing.start && playhead < selectedClip.timing.start + selectedClip.timing.duration : false;
+
   const rulerMarks = Array.from({ length: Math.floor(project.timeline.duration) + 1 }, (_, second) => second);
 
   return (
@@ -100,6 +110,9 @@ export const TimelineEditor = () => {
         </button>
         <button className="text-button" onClick={toggleSnap} type="button">
           <Magnet size={16} /> Snap {project.timeline.snapEnabled ? "On" : "Off"}
+        </button>
+        <button className="text-button" disabled={!selectedClipId || !canSplitSelectedClip} onClick={() => selectedClipId && splitClipAtPlayhead(selectedClipId)} type="button">
+          <Scissors size={16} /> Split
         </button>
         <span className="timecode">{formatTimecode(playhead, project.timeline.fps)}</span>
       </div>
@@ -143,6 +156,16 @@ export const TimelineEditor = () => {
                         <span className="trim-handle left" onPointerDown={(event) => beginDrag(event, clip, "trim-start")} />
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{clip.name}</span>
                         <span className="clip-actions">
+                          <button
+                            aria-label={`Split ${clip.name} at playhead`}
+                            className="clip-action-button"
+                            onClick={(event) => handleSplitClip(event, clip.id)}
+                            onPointerDown={(event) => event.stopPropagation()}
+                            title="Split at playhead"
+                            type="button"
+                          >
+                            <Scissors size={12} />
+                          </button>
                           {(clip.kind === "video" || clip.kind === "audio") ? (
                             <button
                               aria-label={clip.muted ? `Unmute ${clip.name}` : `Mute ${clip.name}`}
