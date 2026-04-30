@@ -72,6 +72,14 @@ describe("PreviewPlayer", () => {
     expect(useEditorStore.getState().playhead).toBe(0);
   });
 
+  it("labels the preview canvas with the selected aspect-ratio dimensions", () => {
+    useEditorStore.getState().setCanvasAspectRatio("9:16");
+
+    render(<PreviewPlayer />);
+
+    expect(screen.getByLabelText(/preview canvas 1080 by 1920/i)).toBeInTheDocument();
+  });
+
   it("stops playback at the end of the selected image or video clip", () => {
     vi.useFakeTimers();
     const clip: EditorClip = {

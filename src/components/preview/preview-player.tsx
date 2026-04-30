@@ -1,7 +1,7 @@
 "use client";
 
 import { Pause, Play, SkipBack, SkipForward, Square, StepBack, StepForward } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { shouldTogglePlaybackFromKeyboard } from "@/lib/keyboard/transport-shortcuts";
 import { getPreviewPlaybackBounds } from "@/lib/preview/playback-bounds";
 import { getRenderableLayers } from "@/lib/renderer/preview-engine";
@@ -100,6 +100,8 @@ export const PreviewPlayer = () => {
   const durationRef = useRef(project.timeline.duration);
   const projectRef = useRef(project);
   const selectedClipIdRef = useRef(selectedClipId);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [previewSize, setPreviewSize] = useState({ width: canvasWidth, height: canvasHeight });
   const layers = getRenderableLayers(project, playhead);
   const activeAudioClips = project.clips.filter((clip) => clip.kind === "audio" && playhead >= clip.timing.start && playhead <= clip.timing.start + clip.timing.duration);
 
@@ -118,6 +120,42 @@ export const PreviewPlayer = () => {
   useEffect(() => {
     selectedClipIdRef.current = selectedClipId;
   }, [selectedClipId]);
+
+  useEffect(() => {
+    const fitCanvasToStage = () => {
+      const stage = stageRef.current;
+      if (!stage) return;
+
+      const styles = window.getComputedStyle(stage);
+      const horizontalPadding = Number.parseFloat(styles.paddingLeft) + Number.parseFloat(styles.paddingRight);
+      const verticalPadding = Number.parseFloat(styles.paddingTop) + Number.parseFloat(styles.paddingBottom);
+      const availableWidth = Math.max(1, stage.clientWidth - horizontalPadding);
+      const availableHeight = Math.max(1, stage.clientHeight - verticalPadding);
+      const canvasAspect = canvasWidth / canvasHeight;
+      const stageAspect = availableWidth / availableHeight;
+
+      const nextSize =
+        stageAspect > canvasAspect
+          ? { width: availableHeight * canvasAspect, height: availableHeight }
+          : { width: availableWidth, height: availableWidth / canvasAspect };
+
+      setPreviewSize({
+        width: Math.round(nextSize.width),
+        height: Math.round(nextSize.height)
+      });
+    };
+
+    fitCanvasToStage();
+
+    if (typeof ResizeObserver !== "undefined" && stageRef.current) {
+      const observer = new ResizeObserver(fitCanvasToStage);
+      observer.observe(stageRef.current);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener("resize", fitCanvasToStage);
+    return () => window.removeEventListener("resize", fitCanvasToStage);
+  }, [canvasHeight, canvasWidth]);
 
   useEffect(() => {
     if (playback !== "playing") {
@@ -175,8 +213,17 @@ export const PreviewPlayer = () => {
 
   return (
     <section className="preview-column" aria-label="Preview player">
-      <div className="preview-stage">
-        <div className="canvas" style={{ aspectRatio: `${canvasWidth} / ${canvasHeight}`, background: project.settings.backgroundColor }}>
+      <div className="preview-stage" ref={stageRef}>
+        <div
+          aria-label={`Preview canvas ${canvasWidth} by ${canvasHeight}`}
+          className="canvas"
+          style={{
+            aspectRatio: `${canvasWidth} / ${canvasHeight}`,
+            background: project.settings.backgroundColor,
+            height: `${previewSize.height}px`,
+            width: `${previewSize.width}px`
+          }}
+        >
           <div className="canvas-grid" />
           {layers.map(({ clip, opacity, leftPercent, topPercent, widthPercent, heightPercent, transform }) => (
             <div

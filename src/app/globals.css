@@ -308,11 +308,9 @@ button {
   background: #050607;
   border: 1px solid #050607;
   box-shadow: 0 18px 70px rgba(0, 0, 0, 0.42);
-  max-height: 100%;
-  max-width: 100%;
+  flex: 0 0 auto;
   overflow: hidden;
   position: relative;
-  width: min(100%, 960px);
 }
 
 .canvas-grid {
