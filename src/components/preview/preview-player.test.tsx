@@ -144,6 +144,130 @@ describe("PreviewPlayer", () => {
     expect(useEditorStore.getState().playhead).toBeGreaterThan(2);
   });
 
+  it("does not restart or seek video on every playhead tick during normal playback", () => {
+    const clip: EditorClip = {
+      id: "stable-video",
+      trackId: "track-video-1",
+      kind: "video",
+      name: "Stable video",
+      sourcePath: "stable.mp4",
+      previewUrl: "blob:stable-video",
+      timing: { start: 0, duration: 5, sourceIn: 0, sourceDuration: 5 },
+      transform: {
+        position: { x: 0, y: 0 },
+        size: { width: 1920, height: 1080 },
+        scale: 1,
+        rotation: 0,
+        opacity: 1
+      },
+      fades: { fadeIn: 0, fadeOut: 0 }
+    };
+    useEditorStore.setState((state) => ({
+      project: { ...state.project, clips: [clip] }
+    }));
+    const play = vi.mocked(HTMLMediaElement.prototype.play);
+    play.mockClear();
+
+    const { container } = render(<PreviewPlayer />);
+    const video = container.querySelector("video");
+    expect(video).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /play preview/i }));
+    expect(play).toHaveBeenCalledTimes(1);
+
+    if (video) {
+      video.currentTime = 0.1;
+    }
+    act(() => useEditorStore.setState({ playhead: 0.1 }));
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(video?.currentTime).toBeCloseTo(0.1);
+
+    if (video) {
+      video.currentTime = 0.2;
+    }
+    act(() => useEditorStore.setState({ playhead: 0.2 }));
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(video?.currentTime).toBeCloseTo(0.2);
+  });
+
+  it("seeks video when the timeline position jumps during playback", () => {
+    const clip: EditorClip = {
+      id: "jump-video",
+      trackId: "track-video-1",
+      kind: "video",
+      name: "Jump video",
+      sourcePath: "jump.mp4",
+      previewUrl: "blob:jump-video",
+      timing: { start: 0, duration: 5, sourceIn: 0, sourceDuration: 5 },
+      transform: {
+        position: { x: 0, y: 0 },
+        size: { width: 1920, height: 1080 },
+        scale: 1,
+        rotation: 0,
+        opacity: 1
+      },
+      fades: { fadeIn: 0, fadeOut: 0 }
+    };
+    useEditorStore.setState((state) => ({
+      project: { ...state.project, clips: [clip] }
+    }));
+
+    const { container } = render(<PreviewPlayer />);
+    const video = container.querySelector("video");
+    expect(video).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /play preview/i }));
+    if (video) {
+      video.currentTime = 0.2;
+    }
+
+    act(() => useEditorStore.getState().setPlayhead(2));
+
+    expect(video?.currentTime).toBeCloseTo(2);
+  });
+
+  it("does not restart or seek audio on every playhead tick during normal playback", () => {
+    const clip: EditorClip = {
+      id: "stable-audio",
+      trackId: "track-audio-1",
+      kind: "audio",
+      name: "Stable audio",
+      sourcePath: "stable.mp3",
+      previewUrl: "blob:stable-audio",
+      volume: 1,
+      volumeFadeIn: 0,
+      volumeFadeOut: 0,
+      timing: { start: 0, duration: 5, sourceIn: 0, sourceDuration: 5 },
+      transform: {
+        position: { x: 0, y: 0 },
+        size: { width: 1920, height: 1080 },
+        scale: 1,
+        rotation: 0,
+        opacity: 1
+      },
+      fades: { fadeIn: 0, fadeOut: 0 }
+    };
+    useEditorStore.setState((state) => ({
+      project: { ...state.project, clips: [clip] }
+    }));
+    const play = vi.mocked(HTMLMediaElement.prototype.play);
+    play.mockClear();
+
+    const { container } = render(<PreviewPlayer />);
+    const audio = container.querySelector("audio");
+    expect(audio).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /play preview/i }));
+    expect(play).toHaveBeenCalledTimes(1);
+
+    if (audio) {
+      audio.currentTime = 0.1;
+    }
+    act(() => useEditorStore.setState({ playhead: 0.1 }));
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(audio?.currentTime).toBeCloseTo(0.1);
+  });
+
   it("stops preview playback at the end of actual timeline content", () => {
     vi.useFakeTimers();
     const clip: EditorClip = {

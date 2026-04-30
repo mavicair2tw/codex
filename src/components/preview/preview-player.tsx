@@ -15,22 +15,67 @@ interface MediaPreviewProps {
   playback: "playing" | "paused" | "stopped";
 }
 
+const SEEK_EPSILON_SECONDS = 0.035;
+const PLAYING_DRIFT_TOLERANCE_SECONDS = 0.45;
+const TIMELINE_JUMP_TOLERANCE_SECONDS = 0.25;
+
+const shouldSeekMedia = ({
+  currentTime,
+  targetTime,
+  playback,
+  previousPlayback,
+  previousTargetTime
+}: {
+  currentTime: number;
+  targetTime: number;
+  playback: "playing" | "paused" | "stopped";
+  previousPlayback: "playing" | "paused" | "stopped" | null;
+  previousTargetTime: number | null;
+}) => {
+  const drift = Math.abs(currentTime - targetTime);
+  const isStartingPlayback = playback === "playing" && previousPlayback !== "playing";
+  const isScrubbingOrPaused = playback !== "playing";
+  const didTimelineJump = previousTargetTime === null || Math.abs(targetTime - previousTargetTime) > TIMELINE_JUMP_TOLERANCE_SECONDS;
+
+  if (isStartingPlayback || isScrubbingOrPaused || didTimelineJump) {
+    return drift > SEEK_EPSILON_SECONDS;
+  }
+
+  return drift > PLAYING_DRIFT_TOLERANCE_SECONDS;
+};
+
 const MediaPreview = ({ clip, localTime, playback }: MediaPreviewProps) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const previousPlaybackRef = useRef<MediaPreviewProps["playback"] | null>(null);
+  const previousTargetRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (clip.kind !== "video" || !videoRef.current) return;
     const video = videoRef.current;
     const target = Math.max(0, clip.timing.sourceIn + localTime);
-    if (Math.abs(video.currentTime - target) > 0.08) {
+    const previousPlayback = previousPlaybackRef.current;
+    const previousTarget = previousTargetRef.current;
+
+    if (
+      shouldSeekMedia({
+        currentTime: video.currentTime,
+        targetTime: target,
+        playback,
+        previousPlayback,
+        previousTargetTime: previousTarget
+      })
+    ) {
       video.currentTime = target;
     }
 
-    if (playback === "playing") {
+    if (playback === "playing" && previousPlayback !== "playing") {
       video.play().catch(() => undefined);
-    } else {
+    } else if (playback !== "playing" && previousPlayback === "playing") {
       video.pause();
     }
+
+    previousPlaybackRef.current = playback;
+    previousTargetRef.current = target;
   }, [clip, localTime, playback]);
 
   if ((clip.kind === "image" || clip.kind === "video") && clip.previewUrl) {
@@ -52,11 +97,15 @@ interface AudioPreviewProps {
 
 const AudioPreview = ({ clip, localTime, playback }: AudioPreviewProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const previousPlaybackRef = useRef<AudioPreviewProps["playback"] | null>(null);
+  const previousTargetRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (clip.kind !== "audio" || !clip.previewUrl || !audioRef.current) return;
     const audio = audioRef.current;
     const target = Math.max(0, clip.timing.sourceIn + localTime);
+    const previousPlayback = previousPlaybackRef.current;
+    const previousTarget = previousTargetRef.current;
     const fadeMultiplier = getFadeMultiplierAtLocalTime(
       localTime,
       clip.timing.duration,
@@ -64,15 +113,26 @@ const AudioPreview = ({ clip, localTime, playback }: AudioPreviewProps) => {
       Math.max(clip.fades.fadeOut, clip.volumeFadeOut)
     );
     audio.volume = clip.muted ? 0 : Math.min(1, clip.volume * fadeMultiplier);
-    if (Math.abs(audio.currentTime - target) > 0.08) {
+    if (
+      shouldSeekMedia({
+        currentTime: audio.currentTime,
+        targetTime: target,
+        playback,
+        previousPlayback,
+        previousTargetTime: previousTarget
+      })
+    ) {
       audio.currentTime = target;
     }
 
-    if (playback === "playing") {
+    if (playback === "playing" && previousPlayback !== "playing") {
       audio.play().catch(() => undefined);
-    } else {
+    } else if (playback !== "playing" && previousPlayback === "playing") {
       audio.pause();
     }
+
+    previousPlaybackRef.current = playback;
+    previousTargetRef.current = target;
   }, [clip, localTime, playback]);
 
   if (clip.kind !== "audio" || !clip.previewUrl || clip.muted) {
