@@ -52,4 +52,22 @@ describe("buildFfmpegCommand", () => {
     expect(filter).toContain("afade=t=out:st=3.000:d=2.000");
     expect(filter).toContain("adelay=8000|8000");
   });
+
+  it("does not assume video inputs have audio streams", () => {
+    const videoClip: EditorClip = {
+      id: "video",
+      trackId: "track-video-1",
+      kind: "video",
+      name: "Silent video",
+      sourcePath: "silent.mp4",
+      timing: { start: 0, duration: 5, sourceIn: 0, sourceDuration: 5 },
+      transform: baseTransform,
+      fades: { fadeIn: 0, fadeOut: 0 }
+    };
+    const command = buildFfmpegCommand({ ...sampleProject, clips: [videoClip] }, "1080p", "out.mp4");
+    const filter = command.args[command.args.indexOf("-filter_complex") + 1];
+
+    expect(filter).not.toContain("[0:a]");
+    expect(filter).toContain("anullsrc=channel_layout=stereo:sample_rate=48000");
+  });
 });

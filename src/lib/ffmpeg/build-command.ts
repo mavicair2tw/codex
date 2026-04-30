@@ -91,9 +91,7 @@ const buildVideoFilters = (project: EditorProject, preset: ExportPreset) => {
 
 const buildAudioFilters = (project: EditorProject) => {
   const media = inputClips(project);
-  const audioInputs = media
-    .map((clip, index) => ({ clip, index }))
-    .filter(({ clip }) => (clip.kind === "audio" || clip.kind === "video") && !clip.muted);
+  const audioInputs = media.map((clip, index) => ({ clip, index })).filter(({ clip }) => clip.kind === "audio" && !clip.muted);
 
   if (audioInputs.length === 0) {
     return "anullsrc=channel_layout=stereo:sample_rate=48000:d=" + project.timeline.duration + "[outa]";
