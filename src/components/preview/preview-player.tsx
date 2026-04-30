@@ -10,7 +10,7 @@ import { getTimelineContentEnd } from "@/lib/timeline/content-end";
 import { useEditorStore } from "@/stores/editor-store";
 import type { EditorClip } from "@/types/editor";
 
-type PreviewEditMode = "move" | "resize-n" | "resize-e" | "resize-s" | "resize-w" | "resize-nw" | "resize-ne" | "resize-sw" | "resize-se";
+type PreviewEditMode = "move" | "rotate" | "resize-n" | "resize-e" | "resize-s" | "resize-w" | "resize-nw" | "resize-ne" | "resize-sw" | "resize-se";
 
 interface PreviewEditState {
   clip: EditorClip;
@@ -18,7 +18,10 @@ interface PreviewEditState {
   originX: number;
   originY: number;
   originPosition: { x: number; y: number };
+  originRotation: number;
+  originScale: number;
   originSize: { width: number; height: number };
+  originPointerAngle: number;
 }
 
 interface MediaPreviewProps {
@@ -30,6 +33,15 @@ interface MediaPreviewProps {
 const SEEK_EPSILON_SECONDS = 0.035;
 const PLAYING_DRIFT_TOLERANCE_SECONDS = 0.45;
 const TIMELINE_JUMP_TOLERANCE_SECONDS = 0.25;
+const MIN_LAYER_SCALE = 0.05;
+const MAX_LAYER_SCALE = 10;
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const normalizeRotation = (degrees: number) => {
+  const normalized = ((degrees % 360) + 360) % 360;
+  return normalized > 180 ? normalized - 360 : normalized;
+};
 
 const shouldSeekMedia = ({
   currentTime,
@@ -292,6 +304,17 @@ export const PreviewPlayer = () => {
     };
   };
 
+  const getPointerAngleFromClipCenter = (event: React.PointerEvent, clip: EditorClip) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) {
+      return 0;
+    }
+
+    const centerX = rect.left + ((clip.transform.position.x + clip.transform.size.width / 2) / canvasWidth) * rect.width;
+    const centerY = rect.top + ((clip.transform.position.y + clip.transform.size.height / 2) / canvasHeight) * rect.height;
+    return (Math.atan2(event.clientY - centerY, event.clientX - centerX) * 180) / Math.PI;
+  };
+
   const beginPreviewEdit = (event: React.PointerEvent, clip: EditorClip, mode: PreviewEditMode) => {
     if (clip.kind === "audio") return;
     event.stopPropagation();
@@ -304,7 +327,10 @@ export const PreviewPlayer = () => {
       originX: event.clientX,
       originY: event.clientY,
       originPosition: clip.transform.position,
-      originSize: clip.transform.size
+      originRotation: clip.transform.rotation,
+      originScale: clip.transform.scale,
+      originSize: clip.transform.size,
+      originPointerAngle: getPointerAngleFromClipCenter(event, clip)
     };
   };
 
@@ -316,12 +342,17 @@ export const PreviewPlayer = () => {
     const minSize = 24;
     let position = edit.originPosition;
     let size = edit.originSize;
+    let scale = edit.originScale;
+    let rotation = edit.originRotation;
 
     if (edit.mode === "move") {
       position = {
         x: edit.originPosition.x + delta.x,
         y: edit.originPosition.y + delta.y
       };
+    } else if (edit.mode === "rotate") {
+      const nextAngle = getPointerAngleFromClipCenter(event, edit.clip);
+      rotation = normalizeRotation(edit.originRotation + nextAngle - edit.originPointerAngle);
     } else {
       const resizeFromLeft = edit.mode === "resize-w" || edit.mode === "resize-nw" || edit.mode === "resize-sw";
       const resizeFromRight = edit.mode === "resize-e" || edit.mode === "resize-ne" || edit.mode === "resize-se";
@@ -339,12 +370,21 @@ export const PreviewPlayer = () => {
         y: height === minSize && resizeFromTop ? edit.originPosition.y + edit.originSize.height - minSize : nextTop
       };
       size = { width, height };
+
+      if (edit.clip.kind === "text") {
+        const widthRatio = width / edit.originSize.width;
+        const heightRatio = height / edit.originSize.height;
+        const nextScale = edit.originScale * Math.max(widthRatio, heightRatio);
+        scale = clamp(nextScale, MIN_LAYER_SCALE, MAX_LAYER_SCALE);
+      }
     }
 
     updateClip(edit.clip.id, {
       transform: {
         ...edit.clip.transform,
         position,
+        rotation,
+        scale,
         size
       }
     });
@@ -403,6 +443,7 @@ export const PreviewPlayer = () => {
                   <span aria-label={`Resize ${clip.name} from top right`} className="preview-resize-handle ne" onPointerDown={(event) => beginPreviewEdit(event, clip, "resize-ne")} role="button" />
                   <span aria-label={`Resize ${clip.name} from bottom left`} className="preview-resize-handle sw" onPointerDown={(event) => beginPreviewEdit(event, clip, "resize-sw")} role="button" />
                   <span aria-label={`Resize ${clip.name} from bottom right`} className="preview-resize-handle se" onPointerDown={(event) => beginPreviewEdit(event, clip, "resize-se")} role="button" />
+                  <span aria-label={`Rotate ${clip.name}`} className="preview-rotate-handle" onPointerDown={(event) => beginPreviewEdit(event, clip, "rotate")} role="button" />
                 </>
               ) : null}
             </div>

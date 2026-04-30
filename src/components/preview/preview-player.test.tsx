@@ -145,6 +145,7 @@ describe("PreviewPlayer", () => {
     expect(screen.getByRole("button", { name: /^resize text layer from right$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^resize text layer from bottom$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^resize text layer from left$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^rotate text layer$/i })).toBeInTheDocument();
 
     const southeastHandle = canvas.querySelector(".preview-resize-handle.se");
     expect(southeastHandle).not.toBeNull();
@@ -157,6 +158,18 @@ describe("PreviewPlayer", () => {
     nextClip = useEditorStore.getState().project.clips[0];
     expect(nextClip.transform.size.width).toBe(400);
     expect(nextClip.transform.size.height).toBe(200);
+    expect(nextClip.transform.scale).toBeCloseTo(1.67, 2);
+
+    const rotateHandle = canvas.querySelector(".preview-rotate-handle");
+    expect(rotateHandle).not.toBeNull();
+    if (!rotateHandle) return;
+
+    fireEvent.pointerDown(rotateHandle, { clientX: 200, clientY: 20, pointerId: 3 });
+    fireEvent.pointerMove(canvas, { clientX: 300, clientY: 120, pointerId: 3 });
+    fireEvent.pointerUp(canvas, { pointerId: 3 });
+
+    nextClip = useEditorStore.getState().project.clips[0];
+    expect(Math.abs(nextClip.transform.rotation)).toBeGreaterThan(20);
   });
 
   it("continues timeline playback past the first selected visual clip", () => {
