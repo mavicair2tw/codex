@@ -1,6 +1,6 @@
 "use client";
 
-import { Pause, Play, Square } from "lucide-react";
+import { Pause, Play, SkipBack, SkipForward, Square, StepBack, StepForward } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { shouldTogglePlaybackFromKeyboard } from "@/lib/keyboard/transport-shortcuts";
 import { getRenderableLayers } from "@/lib/renderer/preview-engine";
@@ -81,6 +81,10 @@ export const PreviewPlayer = () => {
   const playback = useEditorStore((state) => state.playback);
   const setPlayback = useEditorStore((state) => state.setPlayback);
   const setPlayhead = useEditorStore((state) => state.setPlayhead);
+  const jumpToTimelineStart = useEditorStore((state) => state.jumpToTimelineStart);
+  const jumpToTimelineEnd = useEditorStore((state) => state.jumpToTimelineEnd);
+  const stepPlayheadBackward = useEditorStore((state) => state.stepPlayheadBackward);
+  const stepPlayheadForward = useEditorStore((state) => state.stepPlayheadForward);
   const togglePlayback = useEditorStore((state) => state.togglePlayback);
   const stopPlayback = useEditorStore((state) => state.stopPlayback);
   const playheadRef = useRef(playhead);
@@ -168,6 +172,12 @@ export const PreviewPlayer = () => {
       </div>
       <div className="transport">
         <div className="toolbar">
+          <button aria-label="Jump to beginning" className="icon-button" onClick={jumpToTimelineStart} title="Jump to beginning" type="button">
+            <SkipBack size={16} />
+          </button>
+          <button aria-label="Step backward one frame" className="icon-button" onClick={stepPlayheadBackward} title="Step backward" type="button">
+            <StepBack size={16} />
+          </button>
           <button aria-label={playback === "playing" ? "Pause preview" : "Play preview"} className="icon-button" onClick={togglePlayback} title={playback === "playing" ? "Pause" : "Play"} type="button">
             {playback === "playing" ? <Pause size={16} /> : <Play size={16} />}
           </button>
@@ -179,6 +189,12 @@ export const PreviewPlayer = () => {
             type="button"
           >
             <Square size={16} />
+          </button>
+          <button aria-label="Step forward one frame" className="icon-button" onClick={stepPlayheadForward} title="Step forward" type="button">
+            <StepForward size={16} />
+          </button>
+          <button aria-label="Jump to end" className="icon-button" onClick={jumpToTimelineEnd} title="Jump to end" type="button">
+            <SkipForward size={16} />
           </button>
         </div>
         <input className="scrub" max={project.timeline.duration} min={0} onChange={(event) => setPlayhead(Number(event.target.value))} step={1 / project.timeline.fps} type="range" value={playhead} />

@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { sampleProject } from "@/data/sample-project";
-import { clamp, snapTime } from "@/lib/time";
+import { clamp, roundToFrame, snapTime } from "@/lib/time";
 import type { ImportedMediaFile } from "@/lib/media/read-media-file";
 import type { EditorClip, EditorProject, ExportJob, ExportPreset, PlaybackState } from "@/types/editor";
 
@@ -14,6 +14,10 @@ interface EditorState {
   exportJob: ExportJob;
   selectClip: (clipId: string | null) => void;
   setPlayhead: (seconds: number) => void;
+  jumpToTimelineStart: () => void;
+  jumpToTimelineEnd: () => void;
+  stepPlayheadBackward: () => void;
+  stepPlayheadForward: () => void;
   setPlayback: (playback: PlaybackState) => void;
   togglePlayback: () => void;
   playPreview: () => void;
@@ -60,6 +64,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setPlayhead: (seconds) =>
     set((state) => ({
       playhead: snapTime(seconds, state.project.timeline)
+    })),
+
+  jumpToTimelineStart: () => set({ playhead: 0 }),
+
+  jumpToTimelineEnd: () =>
+    set((state) => ({
+      playhead: state.project.timeline.duration
+    })),
+
+  stepPlayheadBackward: () =>
+    set((state) => ({
+      playhead: clamp(roundToFrame(state.playhead - 1 / state.project.timeline.fps, state.project.timeline.fps), 0, state.project.timeline.duration)
+    })),
+
+  stepPlayheadForward: () =>
+    set((state) => ({
+      playhead: clamp(roundToFrame(state.playhead + 1 / state.project.timeline.fps, state.project.timeline.fps), 0, state.project.timeline.duration)
     })),
 
   setPlayback: (playback) => set({ playback }),

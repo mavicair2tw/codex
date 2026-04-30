@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { PreviewPlayer } from "@/components/preview/preview-player";
 import { resetEditorStore } from "@/test-utils/editor-store";
@@ -48,5 +48,22 @@ describe("PreviewPlayer", () => {
     fireEvent.keyDown(input, { code: "Space" });
 
     expect(useEditorStore.getState().playback).toBe("stopped");
+  });
+
+  it("supports precise playhead navigation controls", () => {
+    render(<PreviewPlayer />);
+
+    act(() => useEditorStore.getState().setPlayhead(1));
+    fireEvent.click(screen.getByRole("button", { name: /step forward one frame/i }));
+    expect(useEditorStore.getState().playhead).toBeCloseTo(1 + 1 / 30);
+
+    fireEvent.click(screen.getByRole("button", { name: /step backward one frame/i }));
+    expect(useEditorStore.getState().playhead).toBeCloseTo(1);
+
+    fireEvent.click(screen.getByRole("button", { name: /jump to end/i }));
+    expect(useEditorStore.getState().playhead).toBe(30);
+
+    fireEvent.click(screen.getByRole("button", { name: /jump to beginning/i }));
+    expect(useEditorStore.getState().playhead).toBe(0);
   });
 });
