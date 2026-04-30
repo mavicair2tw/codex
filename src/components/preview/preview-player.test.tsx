@@ -141,6 +141,10 @@ describe("PreviewPlayer", () => {
     let nextClip = useEditorStore.getState().project.clips[0];
     expect(nextClip.transform.position.x).toBe(200);
     expect(nextClip.transform.position.y).toBe(140);
+    expect(screen.getByRole("button", { name: /^resize text layer from top$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^resize text layer from right$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^resize text layer from bottom$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^resize text layer from left$/i })).toBeInTheDocument();
 
     const southeastHandle = canvas.querySelector(".preview-resize-handle.se");
     expect(southeastHandle).not.toBeNull();

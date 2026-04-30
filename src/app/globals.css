@@ -329,9 +329,24 @@ button {
   cursor: move;
   display: flex;
   justify-content: center;
+  overflow: visible;
+  position: absolute;
+  touch-action: none;
+  transform-origin: center;
+}
+
+.preview-layer.selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+.preview-layer-inner {
+  align-items: center;
+  display: flex;
+  inset: 0;
+  justify-content: center;
   overflow: hidden;
   position: absolute;
-  transform-origin: center;
 }
 
 .preview-resize-handle {
@@ -342,6 +357,38 @@ button {
   position: absolute;
   width: 9px;
   z-index: 3;
+}
+
+.preview-resize-handle.n,
+.preview-resize-handle.s {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.preview-resize-handle.e,
+.preview-resize-handle.w {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.preview-resize-handle.n {
+  cursor: ns-resize;
+  top: -5px;
+}
+
+.preview-resize-handle.e {
+  cursor: ew-resize;
+  right: -5px;
+}
+
+.preview-resize-handle.s {
+  bottom: -5px;
+  cursor: ns-resize;
+}
+
+.preview-resize-handle.w {
+  cursor: ew-resize;
+  left: -5px;
 }
 
 .preview-resize-handle.nw {
