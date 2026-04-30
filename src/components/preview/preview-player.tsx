@@ -4,11 +4,22 @@ import { Pause, Play, SkipBack, SkipForward, Square, StepBack, StepForward } fro
 import { useEffect, useRef, useState } from "react";
 import { shouldTogglePlaybackFromKeyboard } from "@/lib/keyboard/transport-shortcuts";
 import { getRenderableLayers } from "@/lib/renderer/preview-engine";
-import { editorFontFallback } from "@/lib/text/fonts";
+import { getEditorFontCssFamily } from "@/lib/text/fonts";
 import { formatTimecode, getFadeMultiplierAtLocalTime } from "@/lib/time";
 import { getTimelineContentEnd } from "@/lib/timeline/content-end";
 import { useEditorStore } from "@/stores/editor-store";
 import type { EditorClip } from "@/types/editor";
+
+type PreviewEditMode = "move" | "resize-nw" | "resize-ne" | "resize-sw" | "resize-se";
+
+interface PreviewEditState {
+  clip: EditorClip;
+  mode: PreviewEditMode;
+  originX: number;
+  originY: number;
+  originPosition: { x: number; y: number };
+  originSize: { width: number; height: number };
+}
 
 interface MediaPreviewProps {
   clip: EditorClip;
@@ -151,6 +162,8 @@ export const PreviewPlayer = () => {
   const setPlayback = useEditorStore((state) => state.setPlayback);
   const setPlayhead = useEditorStore((state) => state.setPlayhead);
   const setPreviewPlayhead = useEditorStore((state) => state.setPreviewPlayhead);
+  const selectClip = useEditorStore((state) => state.selectClip);
+  const updateClip = useEditorStore((state) => state.updateClip);
   const jumpToTimelineStart = useEditorStore((state) => state.jumpToTimelineStart);
   const jumpToTimelineEnd = useEditorStore((state) => state.jumpToTimelineEnd);
   const stepPlayheadBackward = useEditorStore((state) => state.stepPlayheadBackward);
@@ -160,6 +173,8 @@ export const PreviewPlayer = () => {
   const playheadRef = useRef(playhead);
   const previewEndRef = useRef(getTimelineContentEnd(project));
   const stageRef = useRef<HTMLDivElement | null>(null);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const editRef = useRef<PreviewEditState | null>(null);
   const [previewSize, setPreviewSize] = useState({ width: canvasWidth, height: canvasHeight });
   const layers = getRenderableLayers(project, playhead);
   const activeAudioClips = project.clips.filter((clip) => clip.kind === "audio" && playhead >= clip.timing.start && playhead <= clip.timing.start + clip.timing.duration);
@@ -259,12 +274,92 @@ export const PreviewPlayer = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [togglePlayback]);
 
+  const pointerDeltaToCanvas = (event: React.PointerEvent) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) {
+      return { x: 0, y: 0 };
+    }
+
+    const edit = editRef.current;
+    if (!edit) {
+      return { x: 0, y: 0 };
+    }
+
+    return {
+      x: ((event.clientX - edit.originX) / rect.width) * canvasWidth,
+      y: ((event.clientY - edit.originY) / rect.height) * canvasHeight
+    };
+  };
+
+  const beginPreviewEdit = (event: React.PointerEvent, clip: EditorClip, mode: PreviewEditMode) => {
+    if (clip.kind === "audio") return;
+    event.stopPropagation();
+    event.preventDefault();
+    (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+    selectClip(clip.id);
+    editRef.current = {
+      clip,
+      mode,
+      originX: event.clientX,
+      originY: event.clientY,
+      originPosition: clip.transform.position,
+      originSize: clip.transform.size
+    };
+  };
+
+  const handlePreviewPointerMove = (event: React.PointerEvent) => {
+    const edit = editRef.current;
+    if (!edit) return;
+
+    const delta = pointerDeltaToCanvas(event);
+    const minSize = 24;
+    let position = edit.originPosition;
+    let size = edit.originSize;
+
+    if (edit.mode === "move") {
+      position = {
+        x: edit.originPosition.x + delta.x,
+        y: edit.originPosition.y + delta.y
+      };
+    } else {
+      const nextLeft = edit.mode === "resize-nw" || edit.mode === "resize-sw" ? edit.originPosition.x + delta.x : edit.originPosition.x;
+      const nextTop = edit.mode === "resize-nw" || edit.mode === "resize-ne" ? edit.originPosition.y + delta.y : edit.originPosition.y;
+      const nextRight =
+        edit.mode === "resize-ne" || edit.mode === "resize-se" ? edit.originPosition.x + edit.originSize.width + delta.x : edit.originPosition.x + edit.originSize.width;
+      const nextBottom =
+        edit.mode === "resize-sw" || edit.mode === "resize-se" ? edit.originPosition.y + edit.originSize.height + delta.y : edit.originPosition.y + edit.originSize.height;
+
+      const width = Math.max(minSize, nextRight - nextLeft);
+      const height = Math.max(minSize, nextBottom - nextTop);
+      position = {
+        x: width === minSize && (edit.mode === "resize-nw" || edit.mode === "resize-sw") ? edit.originPosition.x + edit.originSize.width - minSize : nextLeft,
+        y: height === minSize && (edit.mode === "resize-nw" || edit.mode === "resize-ne") ? edit.originPosition.y + edit.originSize.height - minSize : nextTop
+      };
+      size = { width, height };
+    }
+
+    updateClip(edit.clip.id, {
+      transform: {
+        ...edit.clip.transform,
+        position,
+        size
+      }
+    });
+  };
+
+  const endPreviewEdit = () => {
+    editRef.current = null;
+  };
+
   return (
     <section className="preview-column" aria-label="Preview player">
       <div className="preview-stage" ref={stageRef}>
         <div
           aria-label={`Preview canvas ${canvasWidth} by ${canvasHeight}`}
           className="canvas"
+          onPointerMove={handlePreviewPointerMove}
+          onPointerUp={endPreviewEdit}
+          ref={canvasRef}
           style={{
             aspectRatio: `${canvasWidth} / ${canvasHeight}`,
             background: project.settings.backgroundColor,
@@ -277,6 +372,7 @@ export const PreviewPlayer = () => {
             <div
               className={`preview-layer ${clip.kind === "text" ? "text" : clip.kind === "image" ? "image" : "media"}`}
               key={clip.id}
+              onPointerDown={(event) => beginPreviewEdit(event, clip, "move")}
               style={{
                 left: `${leftPercent}%`,
                 top: `${topPercent}%`,
@@ -287,10 +383,14 @@ export const PreviewPlayer = () => {
               }}
             >
               {clip.kind === "text" ? (
-                <span style={{ color: clip.color, fontFamily: `"${clip.fontFamily}", ${editorFontFallback}`, fontSize: `${Math.max(12, clip.fontSize / 3)}px` }}>{clip.text}</span>
+                <span style={{ color: clip.color, fontFamily: getEditorFontCssFamily(clip.fontFamily), fontSize: `${Math.max(12, clip.fontSize / 3)}px` }}>{clip.text}</span>
               ) : (
                 <MediaPreview clip={clip} localTime={playhead - clip.timing.start} playback={playback} />
               )}
+              <span aria-hidden className="preview-resize-handle nw" onPointerDown={(event) => beginPreviewEdit(event, clip, "resize-nw")} />
+              <span aria-hidden className="preview-resize-handle ne" onPointerDown={(event) => beginPreviewEdit(event, clip, "resize-ne")} />
+              <span aria-hidden className="preview-resize-handle sw" onPointerDown={(event) => beginPreviewEdit(event, clip, "resize-sw")} />
+              <span aria-hidden className="preview-resize-handle se" onPointerDown={(event) => beginPreviewEdit(event, clip, "resize-se")} />
             </div>
           ))}
           {activeAudioClips.map((clip) => (

@@ -326,11 +326,46 @@ button {
 .preview-layer {
   align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: move;
   display: flex;
   justify-content: center;
   overflow: hidden;
   position: absolute;
   transform-origin: center;
+}
+
+.preview-resize-handle {
+  background: #fff;
+  border: 1px solid #101215;
+  border-radius: 999px;
+  height: 9px;
+  position: absolute;
+  width: 9px;
+  z-index: 3;
+}
+
+.preview-resize-handle.nw {
+  cursor: nwse-resize;
+  left: -5px;
+  top: -5px;
+}
+
+.preview-resize-handle.ne {
+  cursor: nesw-resize;
+  right: -5px;
+  top: -5px;
+}
+
+.preview-resize-handle.sw {
+  bottom: -5px;
+  cursor: nesw-resize;
+  left: -5px;
+}
+
+.preview-resize-handle.se {
+  bottom: -5px;
+  cursor: nwse-resize;
+  right: -5px;
 }
 
 .preview-media {

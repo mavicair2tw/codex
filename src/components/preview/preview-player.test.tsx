@@ -103,6 +103,58 @@ describe("PreviewPlayer", () => {
     expect(screen.getByLabelText(/preview canvas 1080 by 1920/i)).toBeInTheDocument();
   });
 
+  it("moves and resizes visual clips directly on the preview canvas", () => {
+    const clip: EditorClip = {
+      id: "text-layer",
+      trackId: "track-text-1",
+      kind: "text",
+      name: "Text layer",
+      text: "Title",
+      fontSize: 48,
+      fontFamily: "Noto Sans TC",
+      color: "#ffffff",
+      timing: { start: 0, duration: 5, sourceIn: 0, sourceDuration: 5 },
+      transform: {
+        position: { x: 100, y: 100 },
+        size: { width: 300, height: 120 },
+        scale: 1,
+        rotation: 0,
+        opacity: 1
+      },
+      fades: { fadeIn: 0, fadeOut: 0 }
+    };
+    useEditorStore.setState((state) => ({
+      project: { ...state.project, clips: [clip] }
+    }));
+
+    render(<PreviewPlayer />);
+    const canvas = screen.getByLabelText(/preview canvas 1920 by 1080/i);
+    Object.defineProperty(canvas, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({ left: 0, top: 0, width: 960, height: 540, right: 960, bottom: 540, x: 0, y: 0, toJSON: () => ({}) })
+    });
+
+    fireEvent.pointerDown(screen.getByText("Title"), { clientX: 100, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(canvas, { clientX: 150, clientY: 120, pointerId: 1 });
+    fireEvent.pointerUp(canvas, { pointerId: 1 });
+
+    let nextClip = useEditorStore.getState().project.clips[0];
+    expect(nextClip.transform.position.x).toBe(200);
+    expect(nextClip.transform.position.y).toBe(140);
+
+    const southeastHandle = canvas.querySelector(".preview-resize-handle.se");
+    expect(southeastHandle).not.toBeNull();
+    if (!southeastHandle) return;
+
+    fireEvent.pointerDown(southeastHandle, { clientX: 250, clientY: 220, pointerId: 2 });
+    fireEvent.pointerMove(canvas, { clientX: 300, clientY: 260, pointerId: 2 });
+    fireEvent.pointerUp(canvas, { pointerId: 2 });
+
+    nextClip = useEditorStore.getState().project.clips[0];
+    expect(nextClip.transform.size.width).toBe(400);
+    expect(nextClip.transform.size.height).toBe(200);
+  });
+
   it("continues timeline playback past the first selected visual clip", () => {
     vi.useFakeTimers();
     const firstClip: EditorClip = {
