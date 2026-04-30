@@ -4,6 +4,7 @@ export const sampleProject: EditorProject = {
   settings: {
     name: "Codex Editor V1",
     canvas: { width: 1920, height: 1080 },
+    aspectRatio: "16:9",
     backgroundColor: "#050607"
   },
   timeline: {

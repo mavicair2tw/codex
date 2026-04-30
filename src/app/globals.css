@@ -99,6 +99,32 @@ button {
   white-space: nowrap;
 }
 
+.sr-only {
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
+.canvas-controls {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 12px;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.canvas-controls select {
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  height: 32px;
+  padding: 0 8px;
+}
+
 .icon-button,
 .text-button {
   align-items: center;

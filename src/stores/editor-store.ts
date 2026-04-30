@@ -2,9 +2,10 @@
 
 import { create } from "zustand";
 import { sampleProject } from "@/data/sample-project";
+import { getCanvasSize } from "@/lib/canvas/aspect-ratio";
 import { clamp, roundToFrame, snapTime } from "@/lib/time";
 import type { ImportedMediaFile } from "@/lib/media/read-media-file";
-import type { EditorClip, EditorProject, ExportJob, ExportPreset, PlaybackState } from "@/types/editor";
+import type { CanvasAspectRatio, EditorClip, EditorProject, ExportJob, ExportPreset, PlaybackState } from "@/types/editor";
 
 interface EditorState {
   project: EditorProject;
@@ -30,6 +31,7 @@ interface EditorState {
   deleteClip: (clipId: string) => void;
   toggleClipMute: (clipId: string) => void;
   updateClip: (clipId: string, patch: Partial<EditorClip>) => void;
+  setCanvasAspectRatio: (aspectRatio: CanvasAspectRatio) => void;
   addTextClip: () => void;
   addImageClip: () => void;
   addVideoClip: () => void;
@@ -206,6 +208,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       project: {
         ...state.project,
         clips: state.project.clips.map((clip) => (clip.id === clipId ? patchClip(clip, patch) : clip))
+      }
+    })),
+
+  setCanvasAspectRatio: (aspectRatio) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        settings: {
+          ...state.project.settings,
+          aspectRatio,
+          canvas: getCanvasSize(aspectRatio)
+        }
       }
     })),
 

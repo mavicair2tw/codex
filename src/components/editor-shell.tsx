@@ -6,6 +6,7 @@ import { LayerInspector } from "@/components/inspector/layer-inspector";
 import { MediaGallery } from "@/components/media/media-gallery";
 import { PreviewPlayer } from "@/components/preview/preview-player";
 import { TimelineEditor } from "@/components/timeline/timeline-editor";
+import { CanvasControls } from "@/components/toolbar/canvas-controls";
 import { ExportPanel } from "@/components/toolbar/export-panel";
 import { readMediaFile, readMediaPath, type ImportedMediaFile } from "@/lib/media/read-media-file";
 import { useEditorStore } from "@/stores/editor-store";
@@ -87,6 +88,7 @@ export const EditorShell = () => {
         </div>
         {importError ? <div className="import-error">{importError}</div> : null}
         <div style={{ flex: 1 }} />
+        <CanvasControls />
         <ExportPanel />
       </header>
       <section className="main">

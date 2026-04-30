@@ -1,4 +1,4 @@
-import { exportPresetSizes } from "@/lib/ffmpeg/presets";
+import { getExportPresetSize } from "@/lib/ffmpeg/presets";
 import type { EditorClip, EditorProject, ExportPreset } from "@/types/editor";
 
 export interface FfmpegCommand {
@@ -29,7 +29,7 @@ const opacityExpression = (clip: EditorClip) => {
 const inputClips = (project: EditorProject) => project.clips.filter((clip) => clip.kind !== "text");
 
 const buildVideoFilters = (project: EditorProject, preset: ExportPreset) => {
-  const size = exportPresetSizes[preset];
+  const size = getExportPresetSize(preset, project.settings.aspectRatio);
   const visualClips = project.clips.filter((clip) => clip.kind === "video" || clip.kind === "image" || clip.kind === "text");
   const filters: string[] = [`color=c=${project.settings.backgroundColor}:s=${size.width}x${size.height}:r=${project.timeline.fps}:d=${project.timeline.duration}[base]`];
   let currentLabel = "base";

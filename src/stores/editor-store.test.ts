@@ -63,4 +63,16 @@ describe("editor store timeline clip controls", () => {
     expect(nextClips.find((clip) => clip.id === "audio")?.muted).toBe(true);
     expect(nextClips.find((clip) => clip.id === "image")?.muted).toBeUndefined();
   });
+
+  it("updates the canvas size when the aspect ratio changes", () => {
+    useEditorStore.getState().setCanvasAspectRatio("9:16");
+
+    expect(useEditorStore.getState().project.settings.aspectRatio).toBe("9:16");
+    expect(useEditorStore.getState().project.settings.canvas).toEqual({ width: 1080, height: 1920 });
+
+    useEditorStore.getState().setCanvasAspectRatio("1:1");
+
+    expect(useEditorStore.getState().project.settings.aspectRatio).toBe("1:1");
+    expect(useEditorStore.getState().project.settings.canvas).toEqual({ width: 1080, height: 1080 });
+  });
 });

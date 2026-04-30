@@ -2,6 +2,8 @@ export type LayerKind = "video" | "audio" | "text" | "image";
 
 export type ExportPreset = "1080p" | "2k" | "4k";
 
+export type CanvasAspectRatio = "1:1" | "9:16" | "16:9";
+
 export type PlaybackState = "playing" | "paused" | "stopped";
 
 export interface Size {
@@ -94,6 +96,7 @@ export interface TimelineSettings {
 export interface ProjectSettings {
   name: string;
   canvas: Size;
+  aspectRatio: CanvasAspectRatio;
   backgroundColor: string;
 }
 
