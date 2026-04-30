@@ -15,6 +15,29 @@ describe("PreviewPlayer", () => {
   });
 
   it("toggles preview playback from the play button", () => {
+    useEditorStore.setState((state) => ({
+      project: {
+        ...state.project,
+        clips: [
+          {
+            id: "video-for-playback",
+            trackId: "track-video-1",
+            kind: "video",
+            name: "Video for playback",
+            sourcePath: "video.mp4",
+            timing: { start: 0, duration: 5, sourceIn: 0, sourceDuration: 5 },
+            transform: {
+              position: { x: 0, y: 0 },
+              size: { width: 1920, height: 1080 },
+              scale: 1,
+              rotation: 0,
+              opacity: 1
+            },
+            fades: { fadeIn: 0, fadeOut: 0 }
+          }
+        ]
+      }
+    }));
     render(<PreviewPlayer />);
 
     fireEvent.click(screen.getByRole("button", { name: /play preview/i }));
@@ -119,5 +142,51 @@ describe("PreviewPlayer", () => {
 
     expect(useEditorStore.getState().playback).toBe("playing");
     expect(useEditorStore.getState().playhead).toBeGreaterThan(2);
+  });
+
+  it("stops preview playback at the end of actual timeline content", () => {
+    vi.useFakeTimers();
+    const clip: EditorClip = {
+      id: "short-video",
+      trackId: "track-video-1",
+      kind: "video",
+      name: "Short video",
+      sourcePath: "short.mp4",
+      timing: { start: 0, duration: 4, sourceIn: 0, sourceDuration: 4 },
+      transform: {
+        position: { x: 0, y: 0 },
+        size: { width: 1920, height: 1080 },
+        scale: 1,
+        rotation: 0,
+        opacity: 1
+      },
+      fades: { fadeIn: 0, fadeOut: 0 }
+    };
+    useEditorStore.setState((state) => ({
+      project: { ...state.project, clips: [clip] },
+      playhead: 3.8
+    }));
+
+    render(<PreviewPlayer />);
+    fireEvent.click(screen.getByRole("button", { name: /play preview/i }));
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
+
+    expect(useEditorStore.getState().playback).toBe("stopped");
+    expect(useEditorStore.getState().playhead).toBeCloseTo(4);
+  });
+
+  it("does not play an empty timeline", () => {
+    vi.useFakeTimers();
+    render(<PreviewPlayer />);
+
+    fireEvent.click(screen.getByRole("button", { name: /play preview/i }));
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(useEditorStore.getState().playback).toBe("stopped");
+    expect(useEditorStore.getState().playhead).toBe(0);
   });
 });

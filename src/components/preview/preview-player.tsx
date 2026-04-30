@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { shouldTogglePlaybackFromKeyboard } from "@/lib/keyboard/transport-shortcuts";
 import { getRenderableLayers } from "@/lib/renderer/preview-engine";
 import { formatTimecode, getFadeMultiplierAtLocalTime } from "@/lib/time";
+import { getTimelineContentEnd } from "@/lib/timeline/content-end";
 import { useEditorStore } from "@/stores/editor-store";
 import type { EditorClip } from "@/types/editor";
 
@@ -95,7 +96,7 @@ export const PreviewPlayer = () => {
   const togglePlayback = useEditorStore((state) => state.togglePlayback);
   const stopPlayback = useEditorStore((state) => state.stopPlayback);
   const playheadRef = useRef(playhead);
-  const durationRef = useRef(project.timeline.duration);
+  const previewEndRef = useRef(getTimelineContentEnd(project));
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [previewSize, setPreviewSize] = useState({ width: canvasWidth, height: canvasHeight });
   const layers = getRenderableLayers(project, playhead);
@@ -106,8 +107,8 @@ export const PreviewPlayer = () => {
   }, [playhead]);
 
   useEffect(() => {
-    durationRef.current = project.timeline.duration;
-  }, [project.timeline.duration]);
+    previewEndRef.current = getTimelineContentEnd(project);
+  }, [project]);
 
   useEffect(() => {
     const fitCanvasToStage = () => {
@@ -152,14 +153,23 @@ export const PreviewPlayer = () => {
 
     let animationFrame = 0;
     let last = performance.now();
+    const previewEnd = previewEndRef.current;
+
+    if (previewEnd <= 0 || playheadRef.current >= previewEnd) {
+      setPlayhead(previewEnd);
+      setPlayback("stopped");
+      return;
+    }
 
     const tick = (now: number) => {
       const delta = (now - last) / 1000;
       last = now;
       const next = playheadRef.current + delta;
+      const currentPreviewEnd = previewEndRef.current;
 
-      if (next >= durationRef.current) {
-        setPlayhead(durationRef.current);
+      if (next >= currentPreviewEnd) {
+        playheadRef.current = currentPreviewEnd;
+        setPlayhead(currentPreviewEnd);
         setPlayback("stopped");
         return;
       }
