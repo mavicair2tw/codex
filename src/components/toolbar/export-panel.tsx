@@ -1,8 +1,8 @@
 "use client";
 
 import { Download } from "lucide-react";
-import { useState } from "react";
-import { exportProject } from "@/lib/export/export-service";
+import { useEffect, useState } from "react";
+import { exportProject, isDesktopExportAvailable } from "@/lib/export/export-service";
 import { exportPresetLabels } from "@/lib/ffmpeg/presets";
 import { useEditorStore } from "@/stores/editor-store";
 import type { ExportPreset } from "@/types/editor";
@@ -11,11 +11,16 @@ const presets: ExportPreset[] = ["1080p", "2k", "4k"];
 
 export const ExportPanel = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [canExportMp4, setCanExportMp4] = useState(false);
   const project = useEditorStore((state) => state.project);
   const exportJob = useEditorStore((state) => state.exportJob);
   const setExportPreset = useEditorStore((state) => state.setExportPreset);
   const setExportProgress = useEditorStore((state) => state.setExportProgress);
   const setExportStatus = useEditorStore((state) => state.setExportStatus);
+
+  useEffect(() => {
+    setCanExportMp4(isDesktopExportAvailable());
+  }, []);
 
   const runExport = async () => {
     try {
@@ -63,12 +68,13 @@ export const ExportPanel = () => {
                 ))}
               </select>
             </div>
-            <button className="text-button" disabled={exportJob.status === "running"} onClick={runExport} type="button">
+            <button className="text-button" disabled={!canExportMp4 || exportJob.status === "running"} onClick={runExport} type="button">
               Start Export
             </button>
             <div className="progress" aria-label="Export progress">
               <span style={{ width: `${Math.round(exportJob.progress * 100)}%` }} />
             </div>
+            {!canExportMp4 ? <p style={{ color: "var(--muted)", fontSize: 12, margin: 0 }}>MP4 export is available in the desktop app.</p> : null}
             <p style={{ color: "var(--muted)", fontSize: 12, margin: 0 }}>{exportJob.message}</p>
           </div>
         </div>

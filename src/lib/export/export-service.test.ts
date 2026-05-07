@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sampleProject } from "@/data/sample-project";
-import { exportProject } from "@/lib/export/export-service";
+import { exportProject, isDesktopExportAvailable } from "@/lib/export/export-service";
 
 const tauriCore = vi.hoisted(() => ({
   invoke: vi.fn()
@@ -19,7 +19,15 @@ describe("exportProject", () => {
     delete (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
   });
 
-  it("exports through Tauri APIs even when the legacy runtime marker is unavailable", async () => {
+  it("reports when MP4 export is unavailable in the browser", () => {
+    expect(isDesktopExportAvailable()).toBe(false);
+  });
+
+  it("exports through Tauri APIs when the desktop invoke bridge is available", async () => {
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: { invoke: vi.fn() }
+    });
     tauriDialog.save.mockResolvedValue("/Users/example/render.mp4");
     tauriCore.invoke.mockResolvedValue({ outputPath: "/Users/example/render.mp4" });
 
@@ -38,14 +46,17 @@ describe("exportProject", () => {
   });
 
   it("keeps the browser-specific export message when Tauri APIs are unavailable", async () => {
-    tauriDialog.save.mockRejectedValue(new Error("window.__TAURI_INTERNALS__ is undefined"));
-
     await expect(exportProject(sampleProject, "1080p", "render.mp4")).rejects.toThrow(
       "MP4 export requires the desktop app with FFmpeg installed. The browser preview cannot create the exported video file."
     );
+    expect(tauriDialog.save).not.toHaveBeenCalled();
   });
 
   it("keeps the browser-specific export message when the Tauri invoke bridge is unavailable", async () => {
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: { invoke: vi.fn() }
+    });
     tauriDialog.save.mockResolvedValue("/Users/example/render.mp4");
     tauriCore.invoke.mockRejectedValue(new TypeError("Cannot read properties of undefined (reading 'invoke')"));
 
@@ -55,6 +66,10 @@ describe("exportProject", () => {
   });
 
   it("does not start FFmpeg when the save dialog is cancelled", async () => {
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: { invoke: vi.fn() }
+    });
     tauriDialog.save.mockResolvedValue(null);
 
     await expect(exportProject(sampleProject, "1080p", "render.mp4")).rejects.toThrow("Export cancelled.");

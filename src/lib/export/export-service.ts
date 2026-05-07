@@ -7,6 +7,15 @@ interface TauriExportResult {
 
 const desktopRuntimeMessage = "MP4 export requires the desktop app with FFmpeg installed. The browser preview cannot create the exported video file.";
 
+type TauriWindow = Window & {
+  __TAURI_INTERNALS__?: {
+    invoke?: unknown;
+  };
+};
+
+export const isDesktopExportAvailable = () =>
+  typeof window !== "undefined" && typeof (window as TauriWindow).__TAURI_INTERNALS__?.invoke === "function";
+
 const isDesktopRuntimeError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   return /__TAURI_INTERNALS__|reading ['"]invoke['"]|not.*tauri|tauri.*not.*available|ipc|asset protocol/i.test(message);
@@ -31,6 +40,10 @@ const chooseExportPath = async (defaultPath: string) => {
 };
 
 export const exportProject = async (project: EditorProject, preset: ExportPreset, defaultOutputPath: string): Promise<TauriExportResult> => {
+  if (!isDesktopExportAvailable()) {
+    throw new Error(desktopRuntimeMessage);
+  }
+
   let outputPath: string | null;
 
   try {
