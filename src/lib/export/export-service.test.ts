@@ -45,6 +45,15 @@ describe("exportProject", () => {
     );
   });
 
+  it("keeps the browser-specific export message when the Tauri invoke bridge is unavailable", async () => {
+    tauriDialog.save.mockResolvedValue("/Users/example/render.mp4");
+    tauriCore.invoke.mockRejectedValue(new TypeError("Cannot read properties of undefined (reading 'invoke')"));
+
+    await expect(exportProject(sampleProject, "1080p", "render.mp4")).rejects.toThrow(
+      "MP4 export requires the desktop app with FFmpeg installed. The browser preview cannot create the exported video file."
+    );
+  });
+
   it("does not start FFmpeg when the save dialog is cancelled", async () => {
     tauriDialog.save.mockResolvedValue(null);
 

@@ -9,7 +9,7 @@ const desktopRuntimeMessage = "MP4 export requires the desktop app with FFmpeg i
 
 const isDesktopRuntimeError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
-  return /__TAURI_INTERNALS__|not.*tauri|tauri.*not.*available|ipc|asset protocol/i.test(message);
+  return /__TAURI_INTERNALS__|reading ['"]invoke['"]|not.*tauri|tauri.*not.*available|ipc|asset protocol/i.test(message);
 };
 
 const invokeTauri = async <T>(command: string, payload: Record<string, unknown>): Promise<T> => {
