@@ -5,7 +5,12 @@ interface TauriExportResult {
   outputPath: string;
 }
 
-const hasTauriRuntime = () => typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+const desktopRuntimeMessage = "MP4 export requires the desktop app with FFmpeg installed. The browser preview cannot create the exported video file.";
+
+const isDesktopRuntimeError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  return /__TAURI_INTERNALS__|not.*tauri|tauri.*not.*available|ipc|asset protocol/i.test(message);
+};
 
 const invokeTauri = async <T>(command: string, payload: Record<string, unknown>): Promise<T> => {
   const tauri = await import("@tauri-apps/api/core");
@@ -26,19 +31,32 @@ const chooseExportPath = async (defaultPath: string) => {
 };
 
 export const exportProject = async (project: EditorProject, preset: ExportPreset, defaultOutputPath: string): Promise<TauriExportResult> => {
-  if (!hasTauriRuntime()) {
-    throw new Error("MP4 export requires the desktop app with FFmpeg installed. The browser preview cannot create the exported video file.");
+  let outputPath: string | null;
+
+  try {
+    outputPath = await chooseExportPath(defaultOutputPath);
+  } catch (error) {
+    if (isDesktopRuntimeError(error)) {
+      throw new Error(desktopRuntimeMessage);
+    }
+    throw error;
   }
 
-  const outputPath = await chooseExportPath(defaultOutputPath);
   if (!outputPath) {
     throw new Error("Export cancelled.");
   }
 
   const command = buildFfmpegCommand(project, preset, outputPath);
 
-  return invokeTauri<TauriExportResult>("export_with_ffmpeg", {
-    args: command.args,
-    outputPath
-  });
+  try {
+    return await invokeTauri<TauriExportResult>("export_with_ffmpeg", {
+      args: command.args,
+      outputPath
+    });
+  } catch (error) {
+    if (isDesktopRuntimeError(error)) {
+      throw new Error(desktopRuntimeMessage);
+    }
+    throw error;
+  }
 };
